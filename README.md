@@ -84,16 +84,6 @@ Mở trình duyệt tại: **http://localhost:5173**
 
 ---
 
-## 🔐 Tài khoản mẫu để đăng nhập thử
-
-| Role | Email | Mật khẩu |
-|---|---|---|
-| 👤 Người dùng | user@medcare.vn | user123 |
-| 👨‍⚕️ Bác sĩ | doctor@medcare.vn | doctor123 |
-| 🛡️ Admin | admin@medcare.vn | admin123 |
-| 🏥 Lễ tân | staff@medcare.vn | staff123 |
-
----
 
 ## 📦 Phiên bản thư viện chính
 
@@ -119,69 +109,4 @@ npm run preview   # Xem trước bản build production tại localhost:4173
 npm run lint      # Kiểm tra lỗi code theo ESLint
 ```
 
----
-
-## 🗂 Cấu trúc thư mục
-
-```
-booking-care/
-├── public/               # File tĩnh (favicon, icons)
-├── src/
-│   ├── api/              # Gọi API backend (ánh xạ với DTO)
-│   │   ├── config.js     # Axios instance + JWT interceptor
-│   │   ├── auth.js       # Đăng nhập, đăng ký
-│   │   ├── users.js      # Quản lý user, profile
-│   │   ├── appointments.js # Lịch hẹn, lịch làm việc
-│   │   ├── medical.js    # Hồ sơ bệnh án, đơn thuốc
-│   │   ├── catalog.js    # Chuyên khoa, thuốc, bệnh lý
-│   │   ├── payments.js   # Thanh toán
-│   │   └── index.js      # Export tất cả
-│   │
-│   ├── components/       # Component dùng chung
-│   ├── context/          # AuthContext (quản lý đăng nhập)
-│   ├── data/             # mockData.js (dữ liệu mẫu fallback)
-│   ├── hooks/            # Custom hooks (useApi, useDoctors...)
-│   ├── pages/            # Các trang của ứng dụng
-│   │   └── dashboard/    # Dashboard theo từng role
-│   ├── App.jsx           # Router chính
-│   ├── main.jsx          # Entry point
-│   └── index.css         # Tailwind directives
-│
-├── .env                  # ⚠️ KHÔNG commit — chứa URL backend
-├── .env.example          # ✅ Commit — template cho người clone
-├── .gitignore
-├── package.json          # Danh sách thư viện và scripts
-├── vite.config.js        # Cấu hình Vite
-├── tailwind.config.js    # Cấu hình Tailwind
-└── README.md
-```
-
----
-
-## ⚠️ Lưu ý quan trọng
-
-| Vấn đề | Giải thích |
-|---|---|
-| Không thấy `node_modules/` | Bình thường — chạy `npm install` để tạo |
-| Không thấy `dist/` | Bình thường — chạy `npm run build` để tạo |
-| Không có file `.env` | Tạo bằng lệnh `copy .env.example .env` |
-| Lỗi "port 5173 in use" | Đổi port: `npm run dev -- --port 3000` |
-| Backend chưa chạy | Không sao — FE tự dùng mock data |
-
----
-
-## 🌐 Deploy lên hosting
-
-```bash
-npm run build
-# Thư mục dist/ chứa toàn bộ file tĩnh → upload lên Vercel / Netlify / Nginx
-```
-
-**Vercel / Netlify:** Thêm biến môi trường `VITE_API_URL` trong phần Settings → Environment Variables của project.
-
----
-
-## 🔗 Liên kết
-
-- Backend repository: *(điền link repo BE vào đây)*
-- API Documentation: *(điền link Swagger/Postman vào đây)*
+-
