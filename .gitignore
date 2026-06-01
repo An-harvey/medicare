@@ -1,0 +1,40 @@
+# ── Dependencies ──
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build output ──
+dist/
+dist-ssr/
+build/
+
+# ── Environment variables — KHÔNG bao giờ commit file .env thật ──
+.env
+.env.local
+.env.*.local
+# .env.example được commit để người khác biết cần set gì
+
+# ── Logs ──
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Editor ──
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# ── Misc ──
+*.local
+coverage/
+.cache/
