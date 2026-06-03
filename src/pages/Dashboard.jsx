@@ -1,85 +1,105 @@
+/**
+ * Dashboard — Router cho tất cả role
+ * ──────────────────────────────────
+ * Routes theo lo_trinh.txt mục 8:
+ *
+ * ADMIN  : dashboard, users, doctors, specialties, diseases, medicines,
+ *          time-slots, schedules, payments, reports
+ * DOCTOR : dashboard, schedule, patients, prescription, profile
+ * STAFF  : dashboard, checkin, queue, bookings, profile
+ * PATIENT: dashboard, bookings, records, profile
+ */
 import { Routes, Route, Navigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout';
-import { useAuth } from '../context/AuthContext';
+import AppSidebar    from '../components/common/AppSidebar';
+import ErrorBoundary from '../components/common/ErrorBoundary';
+import { useAuth }   from '../context/AuthContext';
 
-/* Role home dashboards */
-import UserDashboard   from './dashboard/UserDashboard';
-import DoctorDashboard from './dashboard/DoctorDashboard';
-import AdminDashboard  from './dashboard/AdminDashboard';
-import StaffDashboard  from './dashboard/StaffDashboard';
+/* ── Role home ── */
+import PatientDashboard from './patient/PatientDashboard';
+import DoctorDashboard  from './doctor/DoctorDashboard';
+import AdminDashboard   from './admin/DashboardPage';
+import StaffDashboard   from './staff/StaffDashboard';
 
-/* Shared */
-import ProfilePage     from './dashboard/shared/ProfilePage';
-import SettingsPage    from './dashboard/shared/SettingsPage';
+/* ── Shared ── */
+import PatientProfilePage from './patient/PatientProfilePage';
+import SettingsPage       from './dashboard/shared/SettingsPage';
 
-/* User */
-import MyBookings      from './dashboard/user/MyBookings';
-import HealthRecords   from './dashboard/user/HealthRecords';
+/* ── PATIENT ── */
+import AppointmentHistoryPage from './patient/AppointmentHistoryPage';
+import MedicalRecordsPage     from './patient/MedicalRecordsPage';
 
-/* Doctor */
-import DoctorSchedulePage from './dashboard/doctor/SchedulePage';
-import PatientsPage       from './dashboard/doctor/PatientsPage';
-import PrescriptionPage   from './dashboard/doctor/PrescriptionPage';
+/* ── DOCTOR ── */
+import DoctorSchedulePage          from './doctor/DoctorSchedulePage';
+import DoctorAppointmentHistoryPage from './doctor/AppointmentHistoryPage';
+import CreateMedicalRecordPage      from './doctor/CreateMedicalRecordPage';
+import DoctorProfilePage            from './doctor/DoctorProfilePage';
 
-/* Admin */
-import UsersPage       from './dashboard/admin/UsersPage';
-import DoctorsPage     from './dashboard/admin/DoctorsPage';
-import RevenuePage     from './dashboard/admin/RevenuePage';
-import SchedulePage    from './dashboard/admin/SchedulePage';
-import ReportsPage     from './dashboard/admin/ReportsPage';
+/* ── ADMIN ── */
+import UsersPage       from './admin/UsersPage';
+import DoctorsPage     from './admin/DoctorsPage';
+import SpecialtiesPage from './admin/SpecialtiesPage';
+import DiseasesPage    from './admin/DiseasesPage';
+import MedicinesPage   from './admin/MedicinesPage';
+import TimeSlotsPage   from './admin/TimeSlotsPage';
+import SchedulesPage   from './admin/SchedulesPage';
+import PaymentsPage    from './admin/PaymentsPage';
+import ReportsPage     from './admin/ReportsPage';
+// ── AdminScheduleAssign: vẫn còn ở path cũ, dùng SchedulesPage thay thế ──
 
-/* Staff */
-import CheckInPage     from './dashboard/staff/CheckInPage';
-
-const Soon = ({ title }) => (
-  <div className="p-8 text-center text-gray-400">
-    <div className="text-5xl mb-4">🚧</div>
-    <p className="font-bold text-gray-600 text-lg">{title}</p>
-    <p className="text-sm mt-1">Tính năng đang được phát triển</p>
-  </div>
-);
+/* ── STAFF ── */
+import AppointmentSearchPage from './staff/AppointmentSearchPage';
+import BookForPatientPage    from './staff/BookForPatientPage';
 
 export default function Dashboard() {
   const { user } = useAuth();
 
   const homeEl = {
-    user:   <UserDashboard />,
+    user:   <PatientDashboard />,
     doctor: <DoctorDashboard />,
     admin:  <AdminDashboard />,
     staff:  <StaffDashboard />,
-  }[user.role] || <UserDashboard />;
+  }[user.role] || <PatientDashboard />;
 
   return (
-    <DashboardLayout>
+    <AppSidebar>
       <Routes>
+        {/* ── Index: home theo role ── */}
         <Route index element={homeEl} />
 
-        {/* ── User ── */}
-        <Route path="bookings" element={<MyBookings />} />
-        <Route path="records"  element={<HealthRecords />} />
+        {/* ══════════ PATIENT routes ══════════ */}
+        <Route path="bookings" element={<AppointmentHistoryPage />} />
+        <Route path="records"  element={<MedicalRecordsPage />} />
 
-        {/* ── Doctor ── */}
-        <Route path="schedule"     element={user.role === 'admin' ? <SchedulePage /> : <DoctorSchedulePage />} />
-        <Route path="patients"     element={<PatientsPage />} />
-        <Route path="prescription" element={<PrescriptionPage />} />
+        {/* ══════════ DOCTOR routes ══════════ */}
+        <Route path="schedule"     element={<DoctorSchedulePage />} />
+        <Route path="patients"     element={<DoctorAppointmentHistoryPage />} />
+        <Route path="prescription" element={<CreateMedicalRecordPage />} />
+        <Route path="doctor-profile" element={<DoctorProfilePage />} />
 
-        {/* ── Admin ── */}
-        <Route path="users"    element={<UsersPage />} />
-        <Route path="doctors"  element={<DoctorsPage />} />
-        <Route path="revenue"  element={<RevenuePage />} />
-        <Route path="reports"  element={<ReportsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        {/* ══════════ ADMIN routes ══════════ */}
+        <Route path="users"       element={<UsersPage />} />
+        <Route path="doctors"     element={<DoctorsPage />} />
+        <Route path="specialties" element={<SpecialtiesPage />} />
+        <Route path="diseases"    element={<DiseasesPage />} />
+        <Route path="medicines"   element={<MedicinesPage />} />
+        <Route path="time-slots"  element={<TimeSlotsPage />} />
+        <Route path="schedules"   element={<SchedulesPage />} />
+        <Route path="assign"      element={<SchedulesPage />} />
+        <Route path="payments"    element={<PaymentsPage />} />
+        <Route path="reports"     element={<ReportsPage />} />
+        <Route path="settings"    element={<SettingsPage />} />
 
-        {/* ── Staff ── */}
-        <Route path="checkin"  element={<CheckInPage />} />
-        <Route path="queue"    element={<CheckInPage />} />
+        {/* ══════════ STAFF routes ══════════ */}
+        <Route path="checkin"        element={<AppointmentSearchPage />} />
+        <Route path="queue"          element={<AppointmentSearchPage />} />
+        <Route path="book-patient"   element={<BookForPatientPage />} />
 
-        {/* ── Shared ── */}
-        <Route path="profile"   element={<ProfilePage />} />
+        {/* ══════════ Shared routes ══════════ */}
+        <Route path="profile"     element={<PatientProfilePage />} />
         <Route path="my-settings" element={<SettingsPage />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </DashboardLayout>
+    </AppSidebar>
   );
 }

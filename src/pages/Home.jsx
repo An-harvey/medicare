@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { specialties, doctors, articles, stats, testimonials } from '../data/mockData';
+import { articles, stats, testimonials } from '../data/mockData';
 import DoctorCard from '../components/DoctorCard';
 import ArticleCard from '../components/ArticleCard';
+import { useSpecialties } from '../hooks/useCatalog';
+import { useDoctors } from '../hooks/useDoctors';
 
 /* ── Ảnh dùng trong trang ── */
 const IMGS = {
@@ -105,7 +107,7 @@ function HeroSection() {
 }
 
 /* ─── Quick Booking Bar ─── */
-function BookingBar() {
+function BookingBar({ specialties = [], doctors = [] }) {
   return (
     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl mx-auto -mt-8 relative z-20 border border-gray-100">
       <h3 className="text-center text-gray-700 font-semibold mb-4 text-sm tracking-wide uppercase">
@@ -115,7 +117,7 @@ function BookingBar() {
         <select className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50">
           <option value="">🩺 Chọn chuyên khoa</option>
           {specialties.map((s) => (
-            <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+            <option key={s.id} value={s.id}>{s.icon || '🏥'} {s.name}</option>
           ))}
         </select>
         <select className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50">
@@ -260,7 +262,7 @@ function FacilitiesSection() {
 }
 
 /* ─── Specialties ─── */
-function SpecialtiesSection() {
+function SpecialtiesSection({ specialties = [] }) {
   return (
     <section id="specialties" className="py-20 bg-white">
       <div className="container mx-auto px-4">
@@ -276,11 +278,11 @@ function SpecialtiesSection() {
             <Link key={s.id} to="/doctors"
               className="bg-gray-50 rounded-2xl p-5 flex flex-col items-center gap-3 hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-gray-100 group">
               <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl group-hover:bg-blue-100 transition-colors shadow-sm">
-                {s.icon}
+                {s.icon || '🏥'}
               </div>
               <div className="text-center">
                 <p className="font-semibold text-gray-800 text-sm">{s.name}</p>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">{s.desc}</p>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">{s.desc || s.description}</p>
               </div>
             </Link>
           ))}
@@ -291,7 +293,7 @@ function SpecialtiesSection() {
 }
 
 /* ─── Doctors ─── */
-function DoctorsSection() {
+function DoctorsSection({ doctors = [] }) {
   return (
     <section className="py-20 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -450,11 +452,14 @@ function CTASection() {
 
 /* ─── Main Page ─── */
 export default function Home() {
+  const { data: specialties } = useSpecialties();
+  const { data: doctors } = useDoctors();
+
   return (
     <div>
       <HeroSection />
       <div className="container mx-auto px-4">
-        <BookingBar />
+        <BookingBar specialties={specialties} doctors={doctors} />
       </div>
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
@@ -463,8 +468,8 @@ export default function Home() {
       </section>
       <AboutSection />
       <FacilitiesSection />
-      <SpecialtiesSection />
-      <DoctorsSection />
+      <SpecialtiesSection specialties={specialties} />
+      <DoctorsSection doctors={doctors} />
       <ProcessSection />
       <TestimonialsSection />
       <NewsSection />

@@ -1,6 +1,14 @@
 /**
- * Cấu hình Axios base — đọc BASE_URL từ .env
- * VITE_API_URL=http://localhost:8080/api
+ * config.js — Axios instance với JWT interceptor
+ * ─────────────────────────────────────────────────
+ * .env: VITE_API_URL=http://localhost:8080/api
+ *
+ * baseURL = http://localhost:8080/api
+ * Tất cả endpoint GỌI không có tiền tố /api nữa
+ * VD: api.post('/auth/login')  → http://localhost:8080/api/auth/login  ✅
+ *
+ * BE trả thẳng data (không wrapper) — interceptor unwrap axios
+ * Lỗi 401 → xóa token, redirect /login
  */
 import axios from 'axios';
 
@@ -10,7 +18,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-/* ── Request interceptor: đính kèm JWT ── */
+// ── Đính kèm JWT vào mọi request ──
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('mc_token');
@@ -20,15 +28,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-/* ── Response interceptor: xử lý lỗi chung ── */
+// ── Xử lý response ──
 api.interceptors.response.use(
-  (response) => response.data,          // trả thẳng data, bỏ wrapper axios
+  (response) => response.data,
   (error) => {
     const status  = error.response?.status;
-    const message = error.response?.data?.message || error.message;
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error   ||
+      (typeof error.response?.data === 'string' ? error.response.data : null) ||
+      error.message;
 
     if (status === 401) {
-      // Token hết hạn → xóa storage, reload về login
       localStorage.removeItem('mc_token');
       localStorage.removeItem('mc_auth');
       window.location.href = '/login';

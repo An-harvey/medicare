@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { doctors, specialties } from '../data/mockData';
+import { useDoctors } from '../hooks/useDoctors';
+import { useSpecialties } from '../hooks/useCatalog';
 
 const SORT_OPTS = [
   { value:'rating',     label:'Đánh giá cao nhất' },
@@ -11,6 +12,8 @@ const SORT_OPTS = [
 
 export default function Search() {
   const [params, setParams] = useSearchParams();
+  const { data: doctors, loading } = useDoctors();
+  const { data: specialties } = useSpecialties();
   const [sort, setSort] = useState('rating');
   const [priceRange, setPriceRange] = useState('all');
   const [selSpec, setSelSpec] = useState(params.get('specialty') || '');
@@ -23,8 +26,9 @@ export default function Search() {
 
   const filtered = doctors
     .filter(d => {
-      const matchQ    = !query || d.name.toLowerCase().includes(query.toLowerCase()) || d.specialty.toLowerCase().includes(query.toLowerCase()) || d.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
-      const matchSpec = !selSpec || d.specialtyId === selSpec;
+      const specName = d.specialty || d.specialtyName || '';
+      const matchQ    = !query || d.name?.toLowerCase().includes(query.toLowerCase()) || specName.toLowerCase().includes(query.toLowerCase()) || (d.tags || []).some(t => t.toLowerCase().includes(query.toLowerCase()));
+      const matchSpec = !selSpec || String(d.specialtyId) === String(selSpec);
       const matchPrice = priceRange === 'all' ? true
         : priceRange === 'lt250' ? d.price < 250000
         : priceRange === '250to350' ? d.price >= 250000 && d.price <= 350000

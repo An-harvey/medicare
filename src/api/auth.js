@@ -1,39 +1,28 @@
 /**
- * Auth API
- * DTO: LoginRequestDTO, RegisterRequestDTO
+ * authApi — Không cần token
+ * ─────────────────────────────────────────────────────────────
+ * baseURL đã là http://localhost:8080/api (từ .env)
+ * → endpoint chỉ cần: /auth/login, /auth/register
+ *
+ * POST /auth/login    Body: { email, password }
+ *                     Response: { token, email, role }
+ *
+ * POST /auth/register Body: { email, password, fullName, phone, cccd }
+ *                     Response: plain string "Đăng ký thành công" (201)
  */
 import api from './config';
 
-/**
- * Đăng nhập
- * @param {{ email: string, password: string }} data — LoginRequestDTO
- * @returns {{ token: string, user: object }}
- */
-export const login = (data) =>
+export const authLogin = (data) =>
   api.post('/auth/login', {
     email:    data.email,
     password: data.password,
   });
 
-/**
- * Đăng ký tài khoản bệnh nhân
- * @param {{ email, password, fullName, phone, cccd }} data — RegisterRequestDTO
- */
-export const register = (data) =>
+export const authRegister = (data) =>
   api.post('/auth/register', {
     email:    data.email,
     password: data.password,
-    fullName: data.fullName || data.name,   // FE dùng "name", BE dùng "fullName"
+    fullName: data.fullName || data.name,
     phone:    data.phone,
     cccd:     data.cccd || '',
   });
-
-/**
- * Lấy thông tin user hiện tại (dùng token)
- */
-export const getMe = () => api.get('/auth/me');
-
-/**
- * Đăng xuất (invalidate token phía server nếu BE hỗ trợ)
- */
-export const logout = () => api.post('/auth/logout').catch(() => {}); // silent fail

@@ -1,10 +1,16 @@
 /**
- * Hook lấy danh sách bác sĩ với filter/search
- * Fallback về mockData khi chưa có backend
+ * useDoctors — Lấy danh sách bác sĩ từ public API
+ * ──────────────────────────────────────────────────
+ * GET /api/public/doctors?name=&specialtyId=
+ * Response: DoctorResponseDTO[]
+ *   { id, fullName, imageUrl, academicTitle, specialtyName, experienceYears }
+ *
+ * Ảnh: GET http://localhost:8080/api/images/{imageUrl}
+ * Fallback: mockData khi BE chưa chạy
  */
 import { useState, useEffect } from 'react';
-import { getDoctors } from '../api';
-import { doctors as mockDoctors } from '../data/mockData';
+import { getDoctors } from '../api/public';
+import { mapDoctorFromApi } from '../utils/doctorMapper';
 
 export function useDoctors(params = {}) {
   const [data,    setData]    = useState([]);
@@ -16,17 +22,24 @@ export function useDoctors(params = {}) {
     setLoading(true);
     setError(null);
 
-    getDoctors(params)
-      .then((res) => {
-        if (!cancelled) {
-          // BE trả về { content: [...] } (Page) hoặc array trực tiếp
-          setData(Array.isArray(res) ? res : res?.content ?? res?.data ?? []);
-        }
+    // Chỉ gửi specialtyId nếu là số nguyên (BE dùng Integer, mock dùng string)
+    const beParams = { ...params };
+    if (beParams.specialtyId && isNaN(Number(beParams.specialtyId))) {
+      delete beParams.specialtyId;
+    } else if (beParams.specialtyId) {
+      beParams.specialtyId = Number(beParams.specialtyId);
+    }
+
+    getDoctors(beParams)
+      .then(res => {
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : res?.content ?? [];
+        setData(list.map(mapDoctorFromApi).filter(Boolean));
       })
-      .catch(() => {
+      .catch((e) => {
         if (!cancelled) {
-          // Fallback mock khi chưa có BE
-          setData(mockDoctors);
+          setError(e?.message || 'Không thể kết nối server');
+          setData([]);
         }
       })
       .finally(() => { if (!cancelled) setLoading(false); });

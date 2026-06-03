@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DoctorCard from '../components/DoctorCard';
-import { doctors, specialties } from '../data/mockData';
+import { useDoctors } from '../hooks/useDoctors';
+import { useSpecialties } from '../hooks/useCatalog';
 
 const SORT_OPTIONS = [
   { value: 'rating',     label: 'Đánh giá cao nhất' },
@@ -12,25 +13,37 @@ const SORT_OPTIONS = [
 
 export default function Doctors() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
-  const [search, setSearch]                       = useState('');
-  const [sort, setSort]                           = useState('rating');
-  const [view, setView]                           = useState('horizontal'); // 'horizontal' | 'grid'
+  const [search, setSearch]   = useState('');
+  const [sort, setSort]       = useState('rating');
+  const [view, setView]       = useState('horizontal');
+  const [priceFilter, setPriceFilter] = useState('all');
+  const [ratingFilter, setRatingFilter] = useState(0);
 
-  const filtered = doctors
-    .filter((d) => {
-      const matchSpec   = selectedSpecialty ? d.specialtyId === selectedSpecialty : true;
-      const matchSearch = search
-        ? d.name.toLowerCase().includes(search.toLowerCase()) ||
-          d.specialty.toLowerCase().includes(search.toLowerCase()) ||
-          d.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
-        : true;
-      return matchSpec && matchSearch;
+  const { data: specialties } = useSpecialties();
+  const { data: allDoctors, loading } = useDoctors(
+    selectedSpecialty ? { specialtyId: selectedSpecialty } : {}
+  );
+
+  const filtered = allDoctors
+    .filter(d => {
+      const matchSearch = !search ||
+        d.name?.toLowerCase().includes(search.toLowerCase()) ||
+        (d.specialty || d.specialtyName)?.toLowerCase().includes(search.toLowerCase()) ||
+        d.tags?.some(t => t.toLowerCase().includes(search.toLowerCase()));
+      const price = d.price || d.consultationFee || 0;
+      const matchPrice = priceFilter === 'all' ? true
+        : priceFilter === 'lt250' ? price < 250000
+        : priceFilter === '250to350' ? price >= 250000 && price <= 350000
+        : price > 350000;
+      const matchRating = ratingFilter === 0 || (d.rating || 0) >= ratingFilter;
+      return matchSearch && matchPrice && matchRating;
     })
     .sort((a, b) => {
-      if (sort === 'rating')     return b.rating - a.rating;
-      if (sort === 'experience') return b.experience - a.experience;
-      if (sort === 'price_asc')  return a.price - b.price;
-      if (sort === 'price_desc') return b.price - a.price;
+      if (sort === 'rating')     return (b.rating||0) - (a.rating||0);
+      if (sort === 'experience') return (b.experience||b.experienceYears||0) - (a.experience||a.experienceYears||0);
+      const pa = a.price||a.consultationFee||0, pb = b.price||b.consultationFee||0;
+      if (sort === 'price_asc')  return pa - pb;
+      if (sort === 'price_desc') return pb - pa;
       return 0;
     });
 
@@ -158,12 +171,14 @@ export default function Doctors() {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Mức phí khám</h3>
                 <div className="space-y-1 text-sm">
                   {[
+                    { label: 'Tất cả', value: 'all' },
                     { label: 'Dưới 250.000đ', value: 'lt250' },
                     { label: '250.000 – 350.000đ', value: '250to350' },
                     { label: 'Trên 350.000đ', value: 'gt350' },
-                  ].map((opt) => (
+                  ].map(opt => (
                     <label key={opt.value} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" className="accent-blue-600 w-3.5 h-3.5" />
+                      <input type="radio" name="price" checked={priceFilter === opt.value}
+                        onChange={() => setPriceFilter(opt.value)} className="accent-blue-600 w-3.5 h-3.5" />
                       <span className="text-slate-600">{opt.label}</span>
                     </label>
                   ))}
@@ -172,21 +187,22 @@ export default function Doctors() {
 
               {/* Đánh giá */}
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Đánh giá</h3>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Đánh giá tối thiểu</h3>
                 <div className="space-y-1 text-sm">
-                  {[5, 4, 3].map((star) => (
+                  {[0, 5, 4, 3].map(star => (
                     <label key={star} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" className="accent-blue-600 w-3.5 h-3.5" />
+                      <input type="radio" name="rating" checked={ratingFilter === star}
+                        onChange={() => setRatingFilter(star)} className="accent-blue-600 w-3.5 h-3.5" />
                       <span className="flex items-center gap-1 text-slate-600">
-                        {'★'.repeat(star)}<span className="text-slate-300">{'★'.repeat(5 - star)}</span>
-                        <span className="text-xs ml-1">trở lên</span>
+                        {star === 0 ? 'Tất cả' : <><span className="text-yellow-400">{'★'.repeat(star)}</span><span className="text-slate-300">{'★'.repeat(5-star)}</span><span className="text-xs ml-1">trở lên</span></>}
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <button className="w-full text-xs text-blue-600 hover:underline text-left px-3">
+              <button onClick={() => { setSelectedSpecialty(''); setPriceFilter('all'); setRatingFilter(0); setSearch(''); }}
+                className="w-full text-xs text-blue-600 hover:underline text-left px-3">
                 Xóa tất cả bộ lọc
               </button>
             </div>
@@ -197,10 +213,10 @@ export default function Doctors() {
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <p className="text-sm text-slate-500">
-                Hiển thị <strong className="text-slate-900">{filtered.length}</strong> bác sĩ
+                {loading ? 'Đang tải...' : <>Hiển thị <strong className="text-slate-900">{filtered.length}</strong> bác sĩ</>}
                 {selectedSpecialty && (
                   <span className="ml-1 text-blue-600">
-                    · {specialties.find((s) => s.id === selectedSpecialty)?.name}
+                    · {specialties.find(s => s.id === selectedSpecialty || s.id === Number(selectedSpecialty))?.name}
                   </span>
                 )}
               </p>

@@ -1,33 +1,40 @@
+/**
+ * AuthContext — Quản lý xác thực toàn ứng dụng
+ * ───────────────────────────────────────────────
+ * Login  : POST /api/auth/login  → { token, email, role }
+ *          Lưu token vào localStorage
+ *          Redirect theo role (lo_trinh.txt mục 8.1)
+ *
+ * Register: POST /api/auth/register → plain string (201)
+ *           KHÔNG auto-login → redirect /login với successMsg
+ *
+ * Role BE : PATIENT | DOCTOR | ADMIN | STAFF
+ * Role FE : user    | doctor | admin | staff  (lowercase, dùng cho UI)
+ */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import * as authApi from '../api/auth';
+import { authLogin, authRegister } from '../api/auth';
+import { BE_TO_FE_ROLE, ROLE_LABEL, ROLE_HOME_ROUTE } from '../utils/constants';
 
 const AuthContext = createContext(null);
 
-/* ── Redirect mặc định theo role ── */
-export const ROLE_HOME = {
-  PATIENT: '/dashboard',
-  DOCTOR:  '/dashboard',
-  ADMIN:   '/dashboard',
-  STAFF:   '/dashboard',
-  // fallback cho mock (lowercase)
-  user:    '/dashboard',
-  doctor:  '/dashboard',
-  admin:   '/dashboard',
-  staff:   '/dashboard',
-};
+/* ── Tạo user object FE từ response BE ── */
+function buildUser(email, beRole, token) {
+  const feRole = BE_TO_FE_ROLE[beRole] || 'user';
+  return {
+    email,
+    username: email,
+    beRole,               // "PATIENT" | "DOCTOR" | "ADMIN" | "STAFF"
+    role:     feRole,     // "user" | "doctor" | "admin" | "staff"
+    label:    ROLE_LABEL[beRole] || 'Người dùng',
+    name:     email.split('@')[0], // BE không trả name trong login → dùng tạm
+    token,
+    avatarUrl: null,
+  };
+}
 
-/* ── Mock accounts — dùng khi chưa có BE ── */
-const MOCK_ACCOUNTS = [
-  { id:'u1', username:'user',   email:'user@medcare.vn',   password:'user123',   name:'Nguyễn Văn A',      role:'user',   label:'Người dùng',        token:'mock-token-user' },
-  { id:'d1', username:'doctor', email:'doctor@medcare.vn', password:'doctor123', name:'BS. Trần Thị Bình', role:'doctor', label:'Bác sĩ',             token:'mock-token-doctor' },
-  { id:'a1', username:'admin',  email:'admin@medcare.vn',  password:'admin123',  name:'Admin MedCare',     role:'admin',  label:'Quản trị viên',      token:'mock-token-admin' },
-  { id:'s1', username:'staff',  email:'staff@medcare.vn',  password:'staff123',  name:'Lê Thị Hoa',        role:'staff',  label:'Lễ tân / Nhân viên', token:'mock-token-staff' },
-];
-
-/* ── Helpers ── */
-function saveSession(user, token) {
+function saveSession(user) {
   localStorage.setItem('mc_auth',  JSON.stringify(user));
-  localStorage.setItem('mc_token', token);
+  localStorage.setItem('mc_token', user.token);
 }
 function clearSession() {
   localStorage.removeItem('mc_auth');
@@ -37,105 +44,53 @@ function loadUser() {
   try { return JSON.parse(localStorage.getItem('mc_auth')); } catch { return null; }
 }
 
-/* ── Normalize user từ BE response về shape FE dùng ── */
-function normalizeUser(beUser, token) {
-  return {
-    id:       beUser.id       || beUser.userId,
-    name:     beUser.fullName || beUser.name,
-    email:    beUser.email,
-    username: beUser.email,
-    phone:    beUser.phone,
-    // BE trả PATIENT/DOCTOR/ADMIN/STAFF → map về lowercase cho FE
-    role:     (beUser.role || beUser.roleName || 'user').toLowerCase().replace('patient','user'),
-    label:    { patient:'Người dùng', doctor:'Bác sĩ', admin:'Quản trị viên', staff:'Lễ tân / Nhân viên' }[
-                (beUser.role || '').toLowerCase()
-              ] || 'Người dùng',
-    token,
-    avatarUrl: beUser.imageUrl || beUser.avatarUrl || null,
-  };
-}
-
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(loadUser);
   const [loading, setLoading] = useState(false);
 
-  /* Sync token vào localStorage mỗi khi user thay đổi */
   useEffect(() => {
-    if (user) saveSession(user, user.token || '');
+    if (user) saveSession(user);
     else clearSession();
   }, [user]);
 
-  /* ── Đăng nhập ── */
-  const login = async ({ email, password, role }) => {
+  /* ─────────── ĐĂNG NHẬP ─────────── */
+  const login = async ({ email, password }) => {
     setLoading(true);
     try {
-      /* Thử gọi BE thật */
-      const res = await authApi.login({ email, password });
-      // BE trả: { token: "...", user: { ... } } hoặc { accessToken, ... }
-      const token   = res.token || res.accessToken;
-      const beUser  = res.user  || res;
-      const normalized = normalizeUser(beUser, token);
-      setUser(normalized);
-      return { ok: true };
-    } catch {
-      /* Fallback mock khi chưa có BE */
-      const found = MOCK_ACCOUNTS.find(
-        (a) => (a.email === email || a.username === email)
-             && a.password === password
-             && (!role || a.role === role),
-      );
-      if (!found) {
-        setLoading(false);
-        return { ok: false, error: 'Tài khoản hoặc mật khẩu không đúng.' };
-      }
-      setUser(found);
+      // POST /api/auth/login → { token, email, role }
+      const res = await authLogin({ email, password });
+      const userData = buildUser(res.email, res.role, res.token);
+      setUser(userData);
       setLoading(false);
-      return { ok: true };
-    } finally {
+      return { ok: true, role: res.role };
+    } catch (err) {
       setLoading(false);
+      const msg = err?.message || err?.raw?.message || 'Email hoặc mật khẩu không đúng.';
+      return { ok: false, error: msg };
     }
   };
 
-  /* ── Đăng ký ── */
+  /* ─────────── ĐĂNG KÝ (PATIENT) ─────────── */
   const register = async ({ name, email, phone, password, cccd }) => {
     setLoading(true);
     try {
-      const res = await authApi.register({ fullName: name, email, phone, password, cccd: cccd || '' });
-      const token  = res.token || res.accessToken;
-      const beUser = res.user  || res;
-      const normalized = normalizeUser(beUser, token);
-      setUser(normalized);
-      return { ok: true };
+      // POST /api/auth/register → "Đăng ký thành công" (201)
+      await authRegister({ fullName: name, email, phone, password, cccd: cccd || '' });
+      setLoading(false);
+      return { ok: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' };
     } catch (err) {
-      /* Fallback mock */
-      const exists = MOCK_ACCOUNTS.find((a) => a.email === email);
-      if (exists) {
-        setLoading(false);
-        return { ok: false, error: 'Email này đã được đăng ký.' };
-      }
-      const newUser = {
-        id: Date.now().toString(), username: email, email, phone,
-        password, name, role: 'user', label: 'Người dùng', token: `mock-${Date.now()}`,
-      };
-      MOCK_ACCOUNTS.push(newUser);
-      setUser(newUser);
       setLoading(false);
-      return { ok: true };
-    } finally {
-      setLoading(false);
+      const msg = err?.message || err?.raw?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      return { ok: false, error: msg };
     }
   };
 
-  /* ── Đăng xuất ── */
-  const logout = () => {
-    authApi.logout().catch(() => {});
-    setUser(null);
-  };
+  /* ─────────── ĐĂNG XUẤT ─────────── */
+  const logout = () => setUser(null);
 
-  /* ── Cập nhật user local (sau khi update profile) ── */
-  const updateLocalUser = (patch) => {
-    setUser((prev) => prev ? { ...prev, ...patch } : prev);
-  };
+  /* Cập nhật thông tin user local sau khi sửa profile */
+  const updateLocalUser = (patch) =>
+    setUser(prev => prev ? { ...prev, ...patch } : prev);
 
   const value = useMemo(
     () => ({ user, isAuthenticated: Boolean(user), loading, login, logout, register, updateLocalUser }),
@@ -148,6 +103,8 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth phải dùng trong AuthProvider');
   return ctx;
 }
+
+export { ROLE_HOME_ROUTE as ROLE_HOME };

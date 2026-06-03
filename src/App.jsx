@@ -1,18 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Header        from './components/Header';
+import AppHeader     from './components/common/AppHeader';
 import Footer        from './components/Footer';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import Home          from './pages/Home';
 import Doctors       from './pages/Doctors';
 import DoctorDetail  from './pages/DoctorDetail';
-import Booking       from './pages/Booking';
+import Booking       from './pages/patient/BookAppointmentPage';
 import Packages      from './pages/Packages';
 import News          from './pages/News';
 import ArticleDetail from './pages/ArticleDetail';
 import Search        from './pages/Search';
 import Dashboard     from './pages/Dashboard';
-import Login         from './pages/Login';
-import Register      from './pages/Register';
+import Login         from './pages/auth/LoginPage';
+import Register      from './pages/auth/RegisterPage';
 import NotFound      from './pages/NotFound';
+import Unauthorized  from './pages/Unauthorized';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function RequireAuth({ children }) {
@@ -32,7 +34,7 @@ function Layout() {
 
   return (
     <div className={noShell ? '' : 'min-h-screen bg-gray-50 flex flex-col'}>
-      {!noShell && <Header />}
+      {!noShell && <AppHeader />}
       <main className={noShell ? '' : 'flex-grow'}>
         <Routes>
           {/* Public */}
@@ -45,6 +47,7 @@ function Layout() {
           <Route path="/search"        element={<Search />} />
           <Route path="/login"         element={<Login />} />
           <Route path="/register"      element={<Register />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Protected */}
           <Route path="/booking/:doctorId" element={
@@ -65,10 +68,12 @@ function Layout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Layout />
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Layout />
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

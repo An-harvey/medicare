@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-/* ── Mock data ── */
-const DOCTORS = [
+// ── ADMIN: schedule management ──
+import { adminGetSchedules, adminCreateSchedule } from '../../../api/admin';
+import { getDoctors } from '../../../api/public';
+import { useTimeSlots } from '../../../hooks/useCatalog';
+
+/* ── Mock data — fallback khi BE chưa chạy ── */
+const MOCK_DOCTORS = [
   { id: 1, name: 'PGS.TS. Nguyễn Văn An', specialty: 'Tim mạch',   avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=60&h=60&fit=crop&crop=faces,top', color: 'bg-red-500' },
   { id: 2, name: 'TS.BS. Trần Thị Bình',  specialty: 'Thần kinh',  avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=60&h=60&fit=crop&crop=faces,top', color: 'bg-purple-500' },
   { id: 3, name: 'GS.TS. Lê Minh Châu',   specialty: 'Xương khớp', avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=60&h=60&fit=crop&crop=faces,top', color: 'bg-blue-500' },
@@ -44,10 +49,10 @@ const STATUS_BOOKING = {
 };
 
 /* ── Modal phân công bác sĩ ── */
-function AssignModal({ booking, onClose, onAssign }) {
+function AssignModal({ booking, onClose, onAssign, doctors }) {
   const [selected, setSelected] = useState(booking.doctor);
-  const available = DOCTORS.filter(d => d.specialty === booking.specialty);
-  const others    = DOCTORS.filter(d => d.specialty !== booking.specialty);
+  const available = doctors.filter(d => d.specialty === booking.specialty);
+  const others    = doctors.filter(d => d.specialty !== booking.specialty);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -126,7 +131,7 @@ function AssignModal({ booking, onClose, onAssign }) {
 }
 
 /* ── Modal thêm ca làm việc ── */
-function AddShiftModal({ cell, onClose, onSave, currentDoctors }) {
+function AddShiftModal({ cell, onClose, onSave, currentDoctors, doctors }) {
   const [selected, setSelected] = useState(currentDoctors);
   const toggle = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
@@ -143,7 +148,7 @@ function AddShiftModal({ cell, onClose, onSave, currentDoctors }) {
         </div>
         <div className="px-6 py-4 space-y-2 max-h-80 overflow-y-auto">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Chọn bác sĩ trực ca này</p>
-          {DOCTORS.map(d => (
+          {doctors.map(d => (
             <button key={d.id} onClick={() => toggle(d.id)}
               className={`w-full flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${selected.includes(d.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-200'}`}>
               <img src={d.avatar} alt={d.name} className="w-9 h-9 rounded-xl object-cover object-top shrink-0" />
@@ -170,7 +175,7 @@ function AddShiftModal({ cell, onClose, onSave, currentDoctors }) {
 }
 
 /* ── Tab: Lịch hẹn chờ phân công ── */
-function BookingAssignTab({ bookings, onAssign }) {
+function BookingAssignTab({ bookings, onAssign, doctors }) {
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
 
@@ -247,7 +252,7 @@ function BookingAssignTab({ bookings, onAssign }) {
           </div>
           <div className="space-y-2">
             {assigned.map(b => {
-              const doc = DOCTORS.find(d => d.id === b.doctor);
+              const doc = doctors.find(d => d.id === b.doctor);
               return (
                 <div key={b.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4">
                   <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-green-700 font-bold text-xs shrink-0">
