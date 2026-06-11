@@ -203,7 +203,8 @@ public class AdminController {
             @RequestParam(value = "direction", defaultValue = "DESC") String direction
     ) {
         // Cấu hình phân trang và sắp xếp dựa trên Entity properties
-        Sort sort = direction.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Sort sort = Sort.by(sortDirection, sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ScheduleResponseDTO> result = scheduleService.getAllSchedules(doctorId, workDate, specialtyId, pageable);
