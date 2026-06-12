@@ -7,6 +7,7 @@ import com.medicare.service.identity.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,7 +19,7 @@ public class AuthController {
 
     // POST /api/auth/login : Đăng nhập hệ thống
     @PostMapping("/login")
-    public ResponseEntity<JwtResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<JwtResponseDTO> login(@Validated @RequestBody LoginRequestDTO loginRequest) {
         JwtResponseDTO response = authService.login(loginRequest);
         return ResponseEntity.ok(response);
     }

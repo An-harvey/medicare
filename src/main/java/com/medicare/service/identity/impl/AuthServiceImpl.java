@@ -14,6 +14,7 @@ import com.medicare.security.CustomUserDetails;
 import com.medicare.security.JwtUtils;
 import com.medicare.service.identity.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
