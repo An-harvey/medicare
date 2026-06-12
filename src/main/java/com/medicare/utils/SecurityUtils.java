@@ -1,5 +1,6 @@
 package com.medicare.utils;
 
+import com.medicare.entity.User;
 import com.medicare.security.CustomUserDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +20,14 @@ public class SecurityUtils {
             return userDetails.getId();
         }
 
+        throw new RuntimeException("Không tìm thấy thông tin xác thực trong Security Context");
+    }
+    public static User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            return userDetails.getUser();
+        }
         throw new RuntimeException("Không tìm thấy thông tin xác thực trong Security Context");
     }
 }

@@ -19,18 +19,20 @@ public class CustomUserDetails implements UserDetails {
     private String email;
     private String password;
     private Collection<? extends GrantedAuthority> authorities;
+    private User user;
 
     // Build từ Entity User
     public static CustomUserDetails build(User user) {
         // Ánh xạ Role của DB thành GrantedAuthority của Spring Security
-        // Lưu ý: Spring Security thường yêu cầu prefix "ROLE_"
+        // Lưu ý: Spring Security yêu cầu prefix "ROLE_"
         GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName().toUpperCase());
 
         return new CustomUserDetails(
                 user.getId(),
                 user.getEmail(),
                 user.getPasswordHash(),
-                Collections.singletonList(authority)
+                Collections.singletonList(authority),
+                user
         );
     }
 

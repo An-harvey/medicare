@@ -38,15 +38,19 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public AppointmentResponseDTO patientBookAppointment(AppointmentRequestDTO dto) {
-        // ... (existing code)
-        return null;
+        User currentUser = SecurityUtils.getCurrentUser();
+        PatientProfile patientProfile = patientProfileRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bệnh nhân của tài khoản này.", HttpStatus.NOT_FOUND));
+        return processBooking(patientProfile, currentUser, dto);
     }
 
     @Override
     @Transactional
     public AppointmentResponseDTO staffBookAppointment(UUID patientId, AppointmentRequestDTO dto) {
-        // ... (existing code)
-        return null;
+        User staffUser = SecurityUtils.getCurrentUser();
+        PatientProfile patientProfile = patientProfileRepository.findById(patientId)
+                .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bệnh nhân với ID: " + patientId, HttpStatus.NOT_FOUND));
+        return processBooking(patientProfile, staffUser, dto);
     }
 
     private AppointmentResponseDTO processBooking(PatientProfile patient, User createdBy, AppointmentRequestDTO dto) {
@@ -130,27 +134,48 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public List<AppointmentResponseDTO> getPatientAppointmentHistory(UUID patientId) {
-        return null;
+        List<Appointment> appointments = appointmentRepository.findByPatient_PatientIdOrderBySchedule_WorkDateDesc(patientId);
+        return appointments.stream()
+                .map(appointmentMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AppointmentResponseDTO> getDoctorAppointmentHistory(UUID doctorId) {
-        return null;
+        List<Appointment> appointments = appointmentRepository.findByDoctor_DoctorIdAndStatusOrderBySchedule_WorkDateDesc(doctorId, AppointmentStatus.COMPLETED);
+        return appointments.stream()
+                .map(appointmentMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AppointmentResponseDTO> searchAppointmentsForStaff(String cccd, LocalDate date) {
-        return null;
+        List<Appointment> appointments;
+        if (cccd != null && !cccd.isEmpty()) {
+            appointments = appointmentRepository.findByPatient_User_Cccd(cccd);
+        } else if (date != null) {
+            appointments = appointmentRepository.findBySchedule_WorkDate(date);
+        } else {
+            throw new CustomException("Vui lòng cung cấp CCCD hoặc ngày để tra cứu.", HttpStatus.BAD_REQUEST);
+        }
+        return appointments.stream()
+                .map(appointmentMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public DoctorStatisticsResponseDTO getDoctorStatistics(UUID doctorId) {
+        //chưa hoàn thiện
         return null;
     }
 
     @Override
     public List<AppointmentResponseDTO> getDoctorUpcomingAppointments(UUID doctorId) {
-        return null;
+        List<AppointmentStatus> upcomingStatus = Arrays.asList(AppointmentStatus.PENDING, AppointmentStatus.ARRIVED);
+        List<Appointment> appointments = appointmentRepository.findByDoctor_DoctorIdAndStatusIn(doctorId, upcomingStatus);
+        return appointments.stream()
+                .map(appointmentMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
