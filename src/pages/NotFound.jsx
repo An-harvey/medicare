@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { safeGoBack } from '../utils/navigation';
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function NotFound() {
           <Link to="/" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">
             🏠 Về trang chủ
           </Link>
-          <button onClick={() => navigate(-1)}
+          <button onClick={() => safeGoBack(navigate, '/')}
             className="border border-gray-200 text-gray-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors">
             ← Quay lại
           </button>

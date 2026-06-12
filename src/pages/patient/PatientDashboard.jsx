@@ -26,7 +26,7 @@ export default function UserDashboard() {
       {/* Welcome */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 text-white">
         <p className="text-blue-100 text-sm mb-1">Xin chào 👋</p>
-        <h1 className="text-2xl font-extrabold">{user.name}</h1>
+        <h1 className="text-2xl font-extrabold">{user?.name || user?.email || 'Bạn'}</h1>
         <p className="text-blue-100 text-sm mt-1">Bạn có <strong className="text-white">2 lịch hẹn</strong> sắp tới trong tuần này</p>
         <Link to="/doctors"
           className="inline-flex items-center gap-2 mt-4 bg-white text-blue-600 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-colors">
@@ -116,7 +116,7 @@ export default function UserDashboard() {
                 <p className="text-[11px] text-blue-600">{d.spec}</p>
                 <p className="text-[11px] text-yellow-500">★ {d.rating}</p>
               </div>
-              <Link to={`/booking/${1}`} className="shrink-0 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg hover:bg-blue-700">
+              <Link to="/doctors" className="shrink-0 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg hover:bg-blue-700">
                 Đặt
               </Link>
             </div>

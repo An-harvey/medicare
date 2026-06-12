@@ -10,8 +10,11 @@
  *   PUT  /api/admin/diseases/{id} → Disease
  *        Body: { code, name, description }
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { adminGetDiseases, adminCreateDisease, adminUpdateDisease } from '../../api/admin';
+
+// BE chưa có DELETE — thêm khi BE hỗ trợ
+// import { adminDeleteDisease } from '../../api/admin';
 
 export default function DiseasesPage() {
   const [diseases,  setDiseases]  = useState([]);
@@ -19,32 +22,30 @@ export default function DiseasesPage() {
   const [total,     setTotal]     = useState(0);
   const [page,      setPage]      = useState(0);
   const [keyword,   setKeyword]   = useState('');
-  const [modal,     setModal]     = useState(null); // null | 'add' | { ...disease }
+  const [modal,     setModal]     = useState(null);
+  const [deleting,  setDeleting]  = useState(null);
 
-  // ── ADMIN: load danh sách bệnh lý ──
   const fetchList = useCallback(async (kw = keyword, pg = page) => {
     setLoading(true);
     try {
-      const res = await adminGetDiseases({
-        keyword:   kw || undefined,
-        page:      pg,
-        size:      10,
-        sortBy:    'code',
-        direction: 'ASC',
-      });
+      const res = await adminGetDiseases({ keyword: kw || undefined, page: pg, size: 10, sortBy: 'code', direction: 'ASC' });
       setDiseases(Array.isArray(res) ? res : res?.content ?? []);
       setTotal(res?.totalElements ?? 0);
     } catch { setDiseases([]); }
     finally { setLoading(false); }
   }, [keyword, page]);
 
-  // Load lần đầu
-  useState(() => { fetchList(); }, []);
+  useEffect(() => { fetchList(); }, [fetchList]);
 
-  const handleSearch = e => {
-    e.preventDefault();
-    setPage(0);
-    fetchList(keyword, 0);
+  const handleSearch = e => { e.preventDefault(); setPage(0); fetchList(keyword, 0); };
+
+  const handleDelete = async (d) => {
+    if (!window.confirm(`Xóa bệnh lý "${d.name}"?`)) return;
+    setDeleting(d.id);
+    try {
+      // await adminDeleteDisease(d.id); // Khi BE bổ sung
+      alert('BE chưa hỗ trợ DELETE /admin/diseases/{id}. Vui lòng liên hệ backend team.');
+    } finally { setDeleting(null); }
   };
 
   return (
@@ -98,10 +99,16 @@ export default function DiseasesPage() {
                 <td className="px-5 py-3.5 font-semibold text-gray-800">{d.name}</td>
                 <td className="px-5 py-3.5 text-gray-400 text-xs hidden md:table-cell line-clamp-1">{d.description || '—'}</td>
                 <td className="px-5 py-3.5 text-right">
-                  <button onClick={() => setModal(d)}
-                    className="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 font-semibold">
-                    ✏️ Sửa
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setModal(d)}
+                      className="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 font-semibold">
+                      ✏️ Sửa
+                    </button>
+                    <button onClick={() => handleDelete(d)} disabled={deleting === d.id}
+                      className="text-xs text-red-500 border border-red-200 px-2 py-1.5 rounded-lg hover:bg-red-50 font-semibold disabled:opacity-50">
+                      {deleting === d.id ? '...' : '🗑️'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

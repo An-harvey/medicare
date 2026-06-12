@@ -3,7 +3,6 @@
  * Bọc toàn bộ app và từng dashboard page để tránh crash
  */
 import { Component } from 'react';
-import { Link } from 'react-router-dom';
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -36,12 +35,13 @@ export default class ErrorBoundary extends Component {
               >
                 Thử lại
               </button>
-              <Link to="/dashboard"
+              <a
+                href="/"
                 onClick={() => this.setState({ hasError: false, error: null })}
                 className="border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50"
               >
-                Về Dashboard
-              </Link>
+                Về trang chủ
+              </a>
             </div>
           </div>
         </div>

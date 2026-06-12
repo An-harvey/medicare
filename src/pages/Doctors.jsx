@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import DoctorCard from '../components/DoctorCard';
 import { useDoctors } from '../hooks/useDoctors';
@@ -138,11 +138,11 @@ export default function Doctors() {
                   >
                     <span>Tất cả chuyên khoa</span>
                     <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-                      {doctors.length}
+                      {allDoctors.length}
                     </span>
                   </button>
                   {specialties.map((s) => {
-                    const count = doctors.filter((d) => d.specialtyId === s.id).length;
+                    const count = allDoctors.filter((d) => d.specialtyId === s.id || String(d.specialtyId) === String(s.id)).length;
                     return (
                       <button
                         key={s.id}
@@ -269,6 +269,14 @@ export default function Doctors() {
                     layout={view === 'grid' ? 'vertical' : 'horizontal'}
                   />
                 ))}
+              </div>
+            ) : !loading && allDoctors.length === 0 ? (
+              <div className="text-center py-24 px-4">
+                <div className="text-6xl mb-4">👨‍⚕️</div>
+                <p className="font-semibold text-slate-700">Chưa có bác sĩ trên hệ thống</p>
+                <p className="text-sm mt-2 text-slate-500 max-w-md mx-auto">
+                  Admin cần tạo tài khoản bác sĩ, khung giờ và lịch làm việc trước khi bệnh nhân có thể đặt lịch online.
+                </p>
               </div>
             ) : (
               <div className="text-center py-24 text-slate-400">

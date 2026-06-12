@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useDoctorHistory, useDoctorStatistics } from '../../hooks/useAppointments';
-import { formatDate, formatTime, todayISO } from '../../utils/formatters';
+import { useDoctorUpcoming, useDoctorStatistics } from '../../hooks/useAppointments';
+import { formatDate, formatTime } from '../../utils/formatters';
 
 const STATUS_STYLE = {
   PENDING:     { label: 'Chờ',       cls: 'bg-yellow-100 text-yellow-700' },
@@ -15,14 +15,13 @@ const STATUS_STYLE = {
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
-  const { data: history, loading: loadingHistory } = useDoctorHistory();
+  const { data: upcoming, loading: loadingUpcoming, error: upcomingError } = useDoctorUpcoming();
   const { data: stats, loading: loadingStats } = useDoctorStatistics();
   const [selected, setSelected] = useState(null);
 
-  const today = todayISO();
   const todayPatients = useMemo(
-    () => history.filter(a => String(a.workDate).split('T')[0] === today),
-    [history, today],
+    () => upcoming,
+    [upcoming],
   );
 
   const statCards = [
@@ -32,14 +31,14 @@ export default function DoctorDashboard() {
     { icon: '📋', label: 'Đã khám tháng này', value: stats?.totalExaminedThisMonth ?? '—', color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
-  const loading = loadingHistory || loadingStats;
+  const loading = loadingUpcoming || loadingStats;
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-gray-400 text-sm">{formatDate(today)}</p>
-          <h1 className="text-2xl font-extrabold text-gray-800">Lịch khám hôm nay</h1>
+          <p className="text-gray-400 text-sm">{formatDate(new Date().toISOString().split('T')[0])}</p>
+          <h1 className="text-2xl font-extrabold text-gray-800">Bệnh nhân cần khám</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Xin chào, <span className="font-semibold text-green-600">{user?.name || user?.email}</span>
           </p>
@@ -63,15 +62,18 @@ export default function DoctorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold text-gray-800">Danh sách bệnh nhân hôm nay</h2>
+            <h2 className="font-bold text-gray-800">Lịch hẹn sắp tới</h2>
             <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full">{todayPatients.length}</span>
           </div>
+          {upcomingError && (
+            <p className="px-5 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-100">{upcomingError}</p>
+          )}
           {loading ? (
             <div className="p-8 flex justify-center">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : todayPatients.length === 0 ? (
-            <p className="p-8 text-center text-sm text-gray-400">Không có lịch hẹn hôm nay</p>
+            <p className="p-8 text-center text-sm text-gray-400">Không có bệnh nhân chờ khám</p>
           ) : (
             <div className="divide-y divide-gray-50">
               {todayPatients.map(p => {

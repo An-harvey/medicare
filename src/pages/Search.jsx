@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useDoctors } from '../hooks/useDoctors';
 import { useSpecialties } from '../hooks/useCatalog';
+import BookDoctorButton from '../components/common/BookDoctorButton';
 
 const SORT_OPTS = [
   { value:'rating',     label:'Đánh giá cao nhất' },
@@ -165,7 +166,7 @@ export default function Search() {
                           <span className="text-gray-500">{d.experience} năm KN</span>
                         </div>
                         <div className="flex flex-wrap gap-1">
-                          {d.tags.map(t => <span key={t} className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full">{t}</span>)}
+                          {(d.tags ?? []).map(t => <span key={t} className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full">{t}</span>)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
@@ -173,10 +174,13 @@ export default function Search() {
                           className="border border-blue-200 text-blue-600 text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors">
                           Xem hồ sơ
                         </Link>
-                        <Link to={`/booking/${d.id}`}
-                          className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors">
+                        <BookDoctorButton
+                          doctorId={d.id}
+                          from={`/search?q=${encodeURIComponent(query)}`}
+                          className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                        >
                           Đặt lịch
-                        </Link>
+                        </BookDoctorButton>
                       </div>
                     </div>
                   </div>

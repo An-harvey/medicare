@@ -53,6 +53,12 @@ export function AuthProvider({ children }) {
     else clearSession();
   }, [user]);
 
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener('mc:auth-expired', onExpired);
+    return () => window.removeEventListener('mc:auth-expired', onExpired);
+  }, []);
+
   /* ─────────── ĐĂNG NHẬP ─────────── */
   const login = async ({ email, password }) => {
     setLoading(true);

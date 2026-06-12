@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useParams, Link } from 'react-router-dom';
 import { getDoctorById, getAvailableSlots } from '../api/public';
 import { mapDoctorFromApi } from '../utils/doctorMapper';
+import { unwrapList } from '../utils/apiHelpers';
+import BookDoctorButton from '../components/common/BookDoctorButton';
+import { useDoctors } from '../hooks/useDoctors';
 
 const REVIEWS = [
   { id:1, name:'Chị Nguyễn Thị Lan', age:42, rating:5, date:'20/05/2026', content:'Bác sĩ rất tận tâm, giải thích rõ ràng từng bước điều trị. Phòng khám sạch sẽ, nhân viên thân thiện. Tôi rất hài lòng.', avatar:'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=60&h=60&fit=crop' },
@@ -28,9 +30,8 @@ function getNext7Days() {
 
 export default function DoctorDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const days = getNext7Days();
+  const { data: allDoctors } = useDoctors();
 
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export default function DoctorDetail() {
     if (!id || !selDate) return;
     getAvailableSlots({ doctorId: id, date: selDate })
       .then(res => {
-        const list = Array.isArray(res) ? res : [];
+        const list = unwrapList(res);
         setAvailSlots(list.filter(s => s.status === 'AVAILABLE' || s.currentPatients < s.maxPatients));
       })
       .catch(() => setAvailSlots([]));
@@ -74,10 +75,10 @@ export default function DoctorDetail() {
     );
   }
 
-  const handleBook = () => {
-    if (!isAuthenticated) { navigate('/login', { state: { from: { pathname: `/booking/${doctor.id}` } } }); return; }
-    navigate(`/booking/${doctor.id}`);
-  };
+  const price = Number(doctor.price ?? doctor.consultationFee ?? 0);
+  const relatedDoctors = allDoctors
+    .filter(d => d.id !== doctor.id && (d.specialtyId === doctor.specialtyId || d.specialty === doctor.specialty))
+    .slice(0, 3);
 
   const ratingDist = [
     { star:5, pct:78 }, { star:4, pct:15 }, { star:3, pct:5 }, { star:2, pct:1 }, { star:1, pct:1 },
@@ -125,7 +126,7 @@ export default function DoctorDetail() {
                     { icon:'⭐', label:'Đánh giá', value:`${doctor.rating}/5` },
                     { icon:'💬', label:'Lượt đánh giá', value:doctor.reviewCount },
                     { icon:'🎓', label:'Kinh nghiệm', value:`${doctor.experience} năm` },
-                    { icon:'💰', label:'Phí khám', value:`${doctor.price.toLocaleString('vi-VN')}đ` },
+                    { icon:'💰', label:'Phí khám', value:`${price.toLocaleString('vi-VN')}đ` },
                   ].map(s => (
                     <div key={s.label} className="bg-gray-50 rounded-2xl p-3 text-center">
                       <div className="text-xl mb-1">{s.icon}</div>
@@ -140,7 +141,7 @@ export default function DoctorDetail() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {doctor.tags.map(t => (
+                  {(doctor.tags ?? []).map(t => (
                     <span key={t} className="bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full">{t}</span>
                   ))}
                 </div>
@@ -295,13 +296,16 @@ export default function DoctorDetail() {
               {/* Fee */}
               <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-between">
                 <span className="text-sm text-gray-600">Phí khám</span>
-                <span className="font-extrabold text-blue-600 text-lg">{doctor.price.toLocaleString('vi-VN')}đ</span>
+                <span className="font-extrabold text-blue-600 text-lg">{price.toLocaleString('vi-VN')}đ</span>
               </div>
 
-              <button onClick={handleBook} disabled={!selTime}
-                className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
-                {selTime ? `Đặt lịch ${selTime}` : 'Chọn giờ để đặt lịch'}
-              </button>
+              <BookDoctorButton
+                doctorId={doctor.id}
+                from={`/doctors/${doctor.id}`}
+                className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {selTime ? `Đặt lịch ${selTime}` : 'Đặt lịch khám'}
+              </BookDoctorButton>
 
               <div className="text-center">
                 <a href="tel:1800599920" className="text-xs text-blue-600 hover:underline font-medium">
@@ -316,9 +320,9 @@ export default function DoctorDetail() {
         <div className="mt-10">
           <h2 className="text-xl font-extrabold text-gray-800 mb-5">Bác sĩ cùng chuyên khoa</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {doctors.filter(d => d.specialtyId === doctor.specialtyId && d.id !== doctor.id).slice(0,3).concat(
-              doctors.filter(d => d.id !== doctor.id).slice(0,3)
-            ).slice(0,3).map(d => (
+            {relatedDoctors.length === 0 ? (
+              <p className="text-sm text-gray-400">Chưa có bác sĩ liên quan.</p>
+            ) : relatedDoctors.map(d => (
               <Link key={d.id} to={`/doctors/${d.id}`}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
                 <img src={d.avatar} alt={d.name} className="w-14 h-14 rounded-xl object-cover object-top shrink-0" />

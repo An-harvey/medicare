@@ -42,7 +42,7 @@ api.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('mc_token');
       localStorage.removeItem('mc_auth');
-      window.location.href = '/login';
+      window.dispatchEvent(new CustomEvent('mc:auth-expired'));
     }
 
     return Promise.reject({ status, message, raw: error.response?.data });

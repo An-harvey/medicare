@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import { getDoctors } from '../api/public';
 import { mapDoctorFromApi } from '../utils/doctorMapper';
+import { unwrapList } from '../utils/apiHelpers';
 
 export function useDoctors(params = {}) {
   const [data,    setData]    = useState([]);
@@ -33,7 +34,7 @@ export function useDoctors(params = {}) {
     getDoctors(beParams)
       .then(res => {
         if (cancelled) return;
-        const list = Array.isArray(res) ? res : res?.content ?? [];
+        const list = unwrapList(res);
         setData(list.map(mapDoctorFromApi).filter(Boolean));
       })
       .catch((e) => {

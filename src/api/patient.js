@@ -63,6 +63,9 @@ export const patientCancelAppointment = (id, reason = 'Bệnh nhân tự hủy')
 export const patientGetMedicalRecords = () =>
   api.get('/patient/medical-records');
 
+export const patientGetMedicalRecordDetails = (id) =>
+  api.get(`/patient/medical-records/${id}`);
+
 // ── Alias exports (tương thích với các component cũ) ──
 export const bookAppointment       = patientBookAppointment;
 export const getPatientProfile     = patientGetProfile;

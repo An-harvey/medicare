@@ -78,12 +78,14 @@ export const IMAGE_BASE_URL = `${API_BASE_URL}/images`;
 export const getImageUrl = (imageUrl) =>
   imageUrl ? `${IMAGE_BASE_URL}/${imageUrl}` : null;
 
-// ── Redirect route theo role sau login ──
+import { ROLE_HOME } from './routes';
+
+// ── Redirect route theo role sau login (lo_trinh.txt mục 8.1) ──
 export const ROLE_HOME_ROUTE = {
-  ADMIN:   '/dashboard',
-  DOCTOR:  '/dashboard',
-  STAFF:   '/dashboard',
-  PATIENT: '/dashboard',
-  // FE lowercase
-  user: '/dashboard', doctor: '/dashboard', admin: '/dashboard', staff: '/dashboard',
+  ...ROLE_HOME,
+  // BE uppercase aliases
+  ADMIN:   ROLE_HOME.ADMIN,
+  DOCTOR:  ROLE_HOME.DOCTOR,
+  STAFF:   ROLE_HOME.STAFF,
+  PATIENT: ROLE_HOME.PATIENT,
 };

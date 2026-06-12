@@ -17,4 +17,5 @@ export * from './patient';
 export * from './doctor';
 export * from './admin';
 export * from './staff';
+export * from './notifications';
 export { default as api } from './config';

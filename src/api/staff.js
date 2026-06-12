@@ -28,3 +28,6 @@ export const staffBookForPatient = (patientId, data) =>
 /* ── Cập nhật trạng thái lịch hẹn ── */
 export const staffUpdateAppointmentStatus = (id, status) =>
   api.put(`/staff/appointments/${id}/status`, null, { params: { status } });
+
+export const staffGetSchedules = (params = {}) =>
+  api.get('/staff/schedules', { params });

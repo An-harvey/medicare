@@ -62,7 +62,8 @@ export default function Dashboard() {
 
   return (
     <AppSidebar>
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         {/* ── Index: home theo role ── */}
         <Route index element={homeEl} />
 
@@ -84,6 +85,7 @@ export default function Dashboard() {
         <Route path="medicines"   element={<MedicinesPage />} />
         <Route path="time-slots"  element={<TimeSlotsPage />} />
         <Route path="schedules"   element={<SchedulesPage />} />
+        {/* assign đã gộp vào schedules */}
         <Route path="assign"      element={<SchedulesPage />} />
         <Route path="payments"    element={<PaymentsPage />} />
         <Route path="reports"     element={<ReportsPage />} />
@@ -99,7 +101,8 @@ export default function Dashboard() {
         <Route path="my-settings" element={<SettingsPage />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </AppSidebar>
   );
 }

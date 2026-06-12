@@ -13,30 +13,24 @@
  */
 import { useState, useEffect } from 'react';
 import { getDoctorSchedulesByDate } from '../../api/doctor';
+import { unwrapList } from '../../utils/apiHelpers';
+import { formatTime } from '../../utils/formatters';
 
 const WEEK_DAYS = ['T2','T3','T4','T5','T6','T7','CN'];
 
-// ── Tạo 7 ngày từ hôm nay ──
 function getNext7Days() {
   const days = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     days.push({
-      date:    d.toISOString().split('T')[0],  // "yyyy-MM-dd"
+      date:    d.toISOString().split('T')[0],
       label:   i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : WEEK_DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1],
       dayNum:  d.getDate(),
       month:   d.getMonth() + 1,
     });
   }
   return days;
-}
-
-// ── Parse LocalTime từ BE ──
-function formatTime(t) {
-  if (!t) return '---';
-  if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
-  return String(t).substring(0, 5);
 }
 
 const STATUS_STYLE = {
@@ -50,26 +44,22 @@ export default function DoctorSchedulePage() {
   const [selectedDay, setSelectedDay] = useState(days[0]);
   const [slots,       setSlots]       = useState([]);
   const [loading,     setLoading]     = useState(false);
+  const [loadError,   setLoadError]   = useState('');
 
-  // ── DOCTOR: load lịch theo ngày đã chọn ──
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setSlots([]);
+    setLoadError('');
 
     getDoctorSchedulesByDate(selectedDay.date)
       .then(res => {
-        if (!cancelled) setSlots(Array.isArray(res) ? res : []);
+        if (!cancelled) setSlots(unwrapList(res));
       })
-      .catch(() => {
-        // Fallback: mock data cho ngày được chọn (demo)
-        if (!cancelled && selectedDay.label === 'Hôm nay') {
-          setSlots([
-            { scheduleId:'s1', startTime:'08:30', maxPatients:5, currentPatients:3, status:'AVAILABLE' },
-            { scheduleId:'s2', startTime:'09:00', maxPatients:5, currentPatients:5, status:'FULL' },
-            { scheduleId:'s3', startTime:'09:30', maxPatients:5, currentPatients:2, status:'AVAILABLE' },
-            { scheduleId:'s4', startTime:'14:00', maxPatients:5, currentPatients:1, status:'AVAILABLE' },
-          ]);
+      .catch(err => {
+        if (!cancelled) {
+          setSlots([]);
+          setLoadError(err?.message || 'Không thể tải lịch làm việc');
         }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -114,7 +104,7 @@ export default function DoctorSchedulePage() {
         <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center text-gray-400">
           <div className="text-5xl mb-3">🏖️</div>
           <p className="font-semibold text-gray-600">Không có lịch khám ngày này</p>
-          <p className="text-sm mt-1">Admin chưa xếp lịch cho ngày {selectedDay.date}</p>
+          <p className="text-sm mt-1">{loadError || `Admin chưa xếp lịch cho ngày ${selectedDay.date}`}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -138,7 +128,7 @@ export default function DoctorSchedulePage() {
                     {/* Progress bar */}
                     <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden w-32">
                       <div className="h-full bg-green-500 rounded-full"
-                        style={{ width: `${(s.currentPatients / s.maxPatients) * 100}%` }} />
+                        style={{ width: `${Math.min(100, ((s.currentPatients || 0) / (s.maxPatients || 1)) * 100)}%` }} />
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2.5 py-1.5 rounded-full ${st.cls}`}>{st.label}</span>

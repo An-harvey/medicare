@@ -7,6 +7,7 @@
  * GET /images/{fileName}                           → file ảnh (dùng trong <img src>)
  */
 import api from './config';
+import { unwrapList } from '../utils/apiHelpers';
 
 export const getSpecialties = () =>
   api.get('/public/specialties');
@@ -20,6 +21,7 @@ export const getAvailableSlots = ({ doctorId, date }) =>
 /** BE chưa có GET /public/doctors/{id} — tìm trong danh sách */
 export async function getDoctorById(id) {
   const res = await getDoctors({});
-  const list = Array.isArray(res) ? res : [];
-  return list.find(d => String(d.id) === String(id)) ?? null;
+  return unwrapList(res).find(d => String(d.id) === String(id)) ?? null;
 }
+
+export { unwrapList };

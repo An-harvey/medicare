@@ -47,6 +47,9 @@ export const adminCreateSpecialty = (data) =>
 export const adminDeleteSpecialty = (id) =>
   api.delete(`/admin/specialties/${id}`);
 
+export const adminUpdateSpecialty = (id, data) =>
+  api.patch(`/admin/specialties/${id}`, { name: data.name, description: data.description });
+
 /* ════════════════════ BỆNH LÝ ════════════════════════ */
 export const adminGetDiseases = (params = {}) =>
   api.get('/admin/diseases', { params });   // { keyword, page, size, sortBy, direction }
@@ -57,9 +60,12 @@ export const adminCreateDisease = (data) =>
 export const adminUpdateDisease = (id, data) =>
   api.put(`/admin/diseases/${id}`, { code: data.code, name: data.name, description: data.description });
 
+export const adminDeleteDisease = (id) =>
+  api.delete(`/admin/diseases/${id}`);
+
 /* ════════════════════ THUỐC ══════════════════════════ */
 export const adminGetMedicines = (params = {}) =>
-  api.get('/admin/medicines', { params });  // { keyword, page, size, sortBy, direction }
+  api.get('/admin/medicines', { params });
 
 export const adminCreateMedicine = (data) =>
   api.post('/admin/medicines', {
@@ -67,6 +73,18 @@ export const adminCreateMedicine = (data) =>
     unit:              data.unit,
     usageInstructions: data.usageInstructions,
   });
+
+// ── Nếu BE chưa có PUT/DELETE → FE hiển thị nút nhưng gọi cùng POST để tạo lại
+// Khi BE bổ sung: PUT /admin/medicines/{id} & DELETE /admin/medicines/{id}
+export const adminUpdateMedicine = (id, data) =>
+  api.patch(`/admin/medicines/${id}`, {
+    name:              data.name,
+    unit:              data.unit,
+    usageInstructions: data.usageInstructions,
+  });
+
+export const adminDeleteMedicine = (id) =>
+  api.delete(`/admin/medicines/${id}`);
 
 /* ════════════════════ USERS ══════════════════════════ */
 // GET users — Page<UserResponseDTO>
@@ -103,24 +121,61 @@ export const adminGetTimeSlots = () =>
 
 export const adminCreateTimeSlot = (data) =>
   api.post('/admin/time-slots', {
-    startTime: data.startTime, // "HH:mm:ss"
+    startTime: data.startTime,
     status:    data.status ?? true,
   });
 
-/* ════════════════════ LỊCH LÀM VIỆC ═════════════════ */
-// GET schedules — Page<ScheduleResponseDTO>
-export const adminGetSchedules = (params = {}) =>
-  api.get('/admin/schedules', { params }); // { doctorId, workDate, specialtyId, page, size, sortBy, direction }
+export const adminUpdateTimeSlot = (id, data) =>
+  api.patch(`/admin/time-slots/${id}`, {
+    startTime: data.startTime,
+    status:    data.status ?? true,
+  });
 
-// POST tạo lịch cho bác sĩ
+// Khi BE bổ sung: DELETE /admin/time-slots/{id}
+export const adminDeleteTimeSlot = (id) =>
+  api.delete(`/admin/time-slots/${id}`);
+
+/* ════════════════════ LỊCH LÀM VIỆC ═════════════════ */
+export const adminGetSchedules = (params = {}) =>
+  api.get('/admin/schedules', { params });
+
 export const adminCreateSchedule = (data) =>
   api.post('/admin/schedules', {
     doctorId:    data.doctorId,
-    workDate:    data.workDate,    // "yyyy-MM-dd"
+    workDate:    data.workDate,
     timeSlotId:  data.timeSlotId,
     maxPatients: data.maxPatients,
   });
 
+export const adminUpdateSchedule = (id, data) =>
+  api.patch(`/admin/schedules/${id}`, {
+    maxPatients: data.maxPatients,
+    status:      data.status,
+  });
+
+// Khi BE bổ sung: DELETE /admin/schedules/{id}
+export const adminDeleteSchedule = (id) =>
+  api.delete(`/admin/schedules/${id}`);
+
 /* ════════════════════ THANH TOÁN ══════════════════════ */
 export const adminGetPayments = () =>
   api.get('/admin/payments');
+
+/* ── Admin Dashboard — lo_trinh.txt §13.2 ── */
+export const adminGetDashboardKpi = () =>
+  api.get('/admin/dashboard/kpi-summary');
+
+export const adminGetDashboardRevenue = (year = 0) =>
+  api.get('/admin/dashboard/revenue', { params: { year } });
+
+export const adminGetDashboardTopDoctors = (month = 0, year = 0) =>
+  api.get('/admin/dashboard/top-doctors', { params: { month, year } });
+
+export const adminGetDashboardSpecialtyStats = (month = 0) =>
+  api.get('/admin/dashboard/specialties', { params: { month } });
+
+export const adminGetDashboardAlerts = () =>
+  api.get('/admin/dashboard/alerts');
+
+export const adminGetDashboardActivities = () =>
+  api.get('/admin/dashboard/activities/today');

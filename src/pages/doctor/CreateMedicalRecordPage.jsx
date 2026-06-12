@@ -296,24 +296,7 @@ export default function PrescriptionPage() {
                   </div>
                 ))
               : !loadingHistory && (
-                  // Fallback mock khi chưa có data
-                  [
-                    { id: 'RX001', patient: 'Lê Văn Cường',   date: '27/05/2026', drugs: 2 },
-                    { id: 'RX002', patient: 'Phạm Thu Hà',    date: '27/05/2026', drugs: 3 },
-                    { id: 'RX003', patient: 'Nguyễn Thị Mai', date: '20/05/2026', drugs: 4 },
-                  ].map(rx => (
-                    <div key={rx.id} className="px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-bold text-gray-800 text-sm">{rx.patient}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{rx.date} · {rx.drugs} loại thuốc</p>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-gray-100 text-gray-500">
-                          Mock
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                  <p className="px-5 py-6 text-center text-sm text-gray-400">Chưa có lịch hẹn nào</p>
                 )
             }
           </div>

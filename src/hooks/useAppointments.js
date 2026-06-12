@@ -35,6 +35,8 @@ import {
 import {
   doctorGetAppointmentHistory,
   doctorGetStatistics,
+  doctorGetUpcomingAppointments,
+  doctorUpdateAppointmentStatus,
 } from '../api/doctor';
 import {
   staffSearchAppointments,
@@ -93,16 +95,55 @@ export function useMyMedicalRecords() {
 export function useDoctorHistory() {
   const [data,    setData]    = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
 
-  useEffect(() => {
+  const fetch = useCallback(async () => {
     setLoading(true);
-    doctorGetAppointmentHistory()
-      .then(res => setData(Array.isArray(res) ? res : []))
-      .catch(() => setData([]))
-      .finally(() => setLoading(false));
+    setError(null);
+    try {
+      const res = await doctorGetAppointmentHistory();
+      setData(Array.isArray(res) ? res : []);
+    } catch (e) {
+      setError(e.message || 'Lỗi tải lịch hẹn');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { data, loading };
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { data, loading, error, refetch: fetch };
+}
+
+/* ════════════ DOCTOR: lịch hẹn sắp tới ═════════════ */
+export function useDoctorUpcoming() {
+  const [data,    setData]    = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await doctorGetUpcomingAppointments();
+      setData(Array.isArray(res) ? res : []);
+    } catch (e) {
+      setError(e.message || 'Lỗi tải lịch hẹn sắp tới');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const updateStatus = async (id, status) => {
+    await doctorUpdateAppointmentStatus(id, status);
+    await fetch();
+  };
+
+  return { data, loading, error, refetch: fetch, updateStatus };
 }
 
 /* ════════════ DOCTOR: thống kê hiệu suất ═══════════ */

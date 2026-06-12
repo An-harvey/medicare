@@ -20,21 +20,17 @@
  */
 import api from './config';
 
-/* ── Hồ sơ bác sĩ ── */
+/* ── Hồ sơ bác sĩ — BẮT BUỘC multipart/form-data, field `dto` (lo_trinh.txt §13.3) ── */
 export const doctorUpdateProfile = (dto, avatarFile) => {
-  // Nếu có ảnh → multipart, không có → JSON thường
-  if (avatarFile) {
-    const form = new FormData();
-    form.append('dto', new Blob([JSON.stringify(dto)], { type: 'application/json' }));
-    form.append('avatarFile', avatarFile);
-    return api.put('/doctor/profile', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  }
-  return api.put('/doctor/profile', {
-    imageUrl:             dto.imageUrl             || null,
-    expertiseDescription: dto.expertiseDescription || null,
-    biography:            dto.biography            || null,
+  const form = new FormData();
+  form.append('dto', JSON.stringify({
+    imageUrl:             dto.imageUrl             ?? null,
+    expertiseDescription: dto.expertiseDescription ?? null,
+    biography:            dto.biography            ?? null,
+  }));
+  if (avatarFile) form.append('avatarFile', avatarFile);
+  return api.put('/doctor/profile', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
 
@@ -68,6 +64,25 @@ export const doctorCreateMedicalRecord = (data) =>
 /* ── Thống kê hiệu suất ── */
 export const doctorGetStatistics = () =>
   api.get('/doctor/statistics');
+
+/* ── Bổ sung lo_trinh.txt §13.3 ── */
+export const doctorGetUpcomingAppointments = () =>
+  api.get('/doctor/appointments/upcoming');
+
+export const doctorUpdateAppointmentStatus = (id, status) =>
+  api.put(`/doctor/appointments/${id}/status`, null, { params: { status } });
+
+export const doctorGetMedicalRecords = () =>
+  api.get('/doctor/medical-records');
+
+export const doctorGetMedicalRecordDetails = (id) =>
+  api.get(`/doctor/medical-records/${id}`);
+
+export const doctorUpdateMedicalRecord = (id, data) =>
+  api.put(`/doctor/medical-records/${id}`, data);
+
+export const doctorGetPatientProfile = (patientId) =>
+  api.get(`/doctor/patients/${patientId}/profile`);
 
 // ── Alias exports (tương thích với các component cũ) ──
 export const updateDoctorProfile          = doctorUpdateProfile;

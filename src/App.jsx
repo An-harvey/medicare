@@ -21,7 +21,13 @@ function RequireAuth({ children }) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: { pathname: location.pathname + location.search } }}
+      />
+    );
   }
   return children;
 }
@@ -47,14 +53,22 @@ function Layout() {
           <Route path="/search"        element={<Search />} />
           <Route path="/login"         element={<Login />} />
           <Route path="/register"      element={<Register />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/unauthorized"  element={<Unauthorized />} />
 
           {/* Protected */}
           <Route path="/booking/:doctorId" element={
-            <RequireAuth><Booking /></RequireAuth>
+            <RequireAuth>
+              <ErrorBoundary>
+                <Booking />
+              </ErrorBoundary>
+            </RequireAuth>
           } />
           <Route path="/dashboard/*" element={
-            <RequireAuth><Dashboard /></RequireAuth>
+            <RequireAuth>
+              <ErrorBoundary>
+                <Dashboard />
+              </ErrorBoundary>
+            </RequireAuth>
           } />
 
           {/* 404 */}
@@ -68,12 +82,12 @@ function Layout() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <ErrorBoundary>
           <Layout />
-        </BrowserRouter>
-      </AuthProvider>
-    </ErrorBoundary>
+        </ErrorBoundary>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

@@ -9,12 +9,13 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_HOME_ROUTE } from '../../utils/constants';
+import { getRedirectPath } from '../../utils/navigation';
 
 export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || null;
+  const from = getRedirectPath(location.state);
 
   const [form,    setForm]    = useState({ email: '', password: '' });
   const [showPwd, setShowPwd] = useState(false);

@@ -5,16 +5,6 @@ import { adminUpdateDoctorAcademic, adminCreateUser } from '../../api/admin';
 import { useDoctors } from '../../hooks/useDoctors';
 import { useSpecialties } from '../../hooks/useCatalog';
 
-// Mock fallback khi BE chưa chạy
-const MOCK_DOCTORS = [
-  { id:1, name:'PGS.TS. Nguyễn Văn An', specialty:'Tim mạch',   degree:'PGS-TS', exp:20, rating:4.9, reviews:248, price:350000, status:'active',  patients:38, img:'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=80&h=80&fit=crop&crop=faces,top' },
-  { id:2, name:'TS.BS. Trần Thị Bình',  specialty:'Thần kinh',  degree:'TS',     exp:15, rating:4.8, reviews:195, price:300000, status:'active',  patients:31, img:'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=80&h=80&fit=crop&crop=faces,top' },
-  { id:3, name:'GS.TS. Lê Minh Châu',   specialty:'Xương khớp', degree:'GS-TS',  exp:25, rating:4.9, reviews:312, price:400000, status:'active',  patients:42, img:'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=80&h=80&fit=crop&crop=faces,top' },
-  { id:4, name:'ThS.BS. Phạm Thị Dung', specialty:'Nhi khoa',   degree:'ThS',    exp:10, rating:4.7, reviews:180, price:250000, status:'active',  patients:28, img:'https://images.unsplash.com/photo-1651008376811-b90baee60c1f?w=80&h=80&fit=crop&crop=faces,top' },
-  { id:5, name:'BS.CKI. Hoàng Văn Em',  specialty:'Da liễu',    degree:'CKI',    exp:12, rating:4.6, reviews:140, price:220000, status:'leave',   patients:22, img:'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=80&h=80&fit=crop&crop=faces,top' },
-  { id:6, name:'TS.BS. Vũ Thị Phương',  specialty:'Mắt',        degree:'TS',     exp:14, rating:4.8, reviews:210, price:280000, status:'active',  patients:35, img:'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=80&h=80&fit=crop&crop=faces,top' },
-];
-
 const STATUS = {
   active: { label: 'Đang làm việc', cls: 'bg-green-100 text-green-700' },
   leave:  { label: 'Nghỉ phép',     cls: 'bg-yellow-100 text-yellow-700' },
@@ -216,8 +206,7 @@ export default function DoctorsPage() {
   // ── ADMIN: chuyên khoa select ──
   const { data: specialties } = useSpecialties();
 
-  // Dùng API data nếu có, fallback sang mock
-  const rawList = (apiDoctors && apiDoctors.length > 0) ? apiDoctors : MOCK_DOCTORS;
+  const rawList = apiDoctors || [];
 
   // Normalize: đảm bảo luôn có các field cần thiết
   const doctors = rawList.map(d => ({

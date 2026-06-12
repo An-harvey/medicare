@@ -96,7 +96,7 @@ export default function Header() {
                 <button onClick={() => setDropOpen(!dropOpen)}
                   className="flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
                   <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                    {user.name.charAt(0)}
+                    {user.name?.charAt(0) || '?'}
                   </div>
                   <div className="text-left hidden lg:block">
                     <p className="text-xs font-semibold text-gray-800 leading-tight">{user.name}</p>
@@ -196,7 +196,7 @@ export default function Header() {
               <>
                 <div className="px-3 py-3 bg-gray-50 rounded-xl flex items-center gap-3">
                   <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                    {user.name.charAt(0)}
+                    {user.name?.charAt(0) || '?'}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-800">{user.name}</p>

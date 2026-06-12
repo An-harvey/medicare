@@ -4,6 +4,8 @@
  */
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { homeForFeRole } from '../utils/routes';
+import { safeGoBack } from '../utils/navigation';
 
 export default function Unauthorized() {
   const navigate = useNavigate();
@@ -20,11 +22,11 @@ export default function Unauthorized() {
         </p>
         <p className="text-gray-400 text-xs mb-8">Role hiện tại: <span className="font-semibold">{user?.label}</span></p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/dashboard"
+          <Link to={homeForFeRole(user?.role)}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors">
             📊 Về Dashboard
           </Link>
-          <button onClick={() => navigate(-1)}
+          <button onClick={() => safeGoBack(navigate, homeForFeRole(user?.role))}
             className="border border-gray-200 text-gray-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors">
             ← Quay lại
           </button>
