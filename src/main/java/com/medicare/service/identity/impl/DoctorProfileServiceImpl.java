@@ -41,25 +41,24 @@ public class DoctorProfileServiceImpl implements DoctorProfileService {
                 .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bác sĩ.", HttpStatus.NOT_FOUND));
 
         // Tiến hành cập nhật các trường thông tin được cho phép
-        profile.setExpertiseDescription(dto.getExpertiseDescription());
-        profile.setBiography(dto.getBiography());
+        if(dto.getExpertiseDescription() !=null){
+            profile.setExpertiseDescription(dto.getExpertiseDescription());}
+
+        if(dto.getBiography() !=null){
+            profile.setBiography(dto.getBiography());}
 
         //  Xử lý lưu ảnh nếu có file được gửi lên
         if (avatarFile != null && !avatarFile.isEmpty()) {
             // Lưu file xuống ổ cứng và lấy tên file (ví dụ: a1b2c3d4.jpg)
             String fileName = fileStorageService.storeFile(avatarFile);
 
-            // Tạo đường dẫn URL đầy đủ để Client có thể gọi và xem ảnh
-            // Kết quả sẽ dạng: http://localhost:8080/api/images/a1b2c3d4.jpg
-            String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/api/images/") // Lát nữa ta sẽ viết Controller đón đường dẫn này
-                    .path(fileName)
-                    .toUriString();
+            // Tạo đường dẫn tương đối
+            // Kết quả sẽ dạng: api/images/a1b2c3d4.jpg
+            String relativePath = "/api/images/" + fileName;
 
             // Lưu chuỗi URL vào cột image_url trong CSDL
-            profile.setImageUrl(fileDownloadUri);
+            profile.setImageUrl(relativePath);
         }
-
         DoctorProfile updatedProfile = doctorProfileRepository.save(profile);
         return profileMapper.toDoctorDetailResponse(updatedProfile.getUser(), updatedProfile, updatedProfile.getSpecialty());
     }

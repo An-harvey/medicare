@@ -2,6 +2,8 @@ package com.medicare.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -43,4 +45,7 @@ public class DoctorProfile {
 
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String biography;
+
+    @Column(name="fee")
+    private BigDecimal fee;
 }

@@ -39,15 +39,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     long countByStatus(AppointmentStatus status);
 
     // Dashboard: Top 5 bác sĩ có nhiều ca khám nhất trong tháng
-    @Query(value = "SELECT d.doctor_id, u.full_name, d.academic_title, s.name as specialty_name, d.rating, COUNT(a.id) as total_appointments " +
+    @Query(value = "SELECT TOP 5 d.doctor_id, u.full_name, d.academic_title, s.name as specialty_name, d.rating, COUNT(a.id) as total_appointments " +
                    "FROM Appointments a " +
                    "JOIN Doctor_Profiles d ON a.doctor_id = d.doctor_id " +
                    "JOIN Users u ON d.doctor_id = u.id " +
                    "JOIN Specialties s ON d.specialty_id = s.id " +
                    "WHERE MONTH(a.created_at) = :month AND YEAR(a.created_at) = :year " +
                    "GROUP BY d.doctor_id, u.full_name, d.academic_title, s.name, d.rating " +
-                   "ORDER BY total_appointments DESC " +
-                   "LIMIT 5", nativeQuery = true)
+                   "ORDER BY total_appointments DESC " , nativeQuery = true)
     List<Object[]> findTopDoctorsByMonth(@Param("month") int month, @Param("year") int year);
 
     // Dashboard: Thống kê lịch hẹn theo chuyên khoa

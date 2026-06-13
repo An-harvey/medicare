@@ -19,6 +19,7 @@ public class PrescriptionResponseDTO {
     @Getter
     @Setter
     @AllArgsConstructor
+    @Builder
     public static class MedicineDetailDTO {
         private String medicineName;
         private Integer quantity;

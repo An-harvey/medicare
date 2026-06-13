@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -31,34 +33,42 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final ScheduleRepository scheduleRepository;
     private final PatientProfileRepository patientProfileRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final AppointmentMapper appointmentMapper;
 
+
+    //Bệnh nhân đặt lịch khám trên web
     @Override
     @Transactional
     public AppointmentResponseDTO patientBookAppointment(AppointmentRequestDTO dto) {
         User currentUser = SecurityUtils.getCurrentUser();
         PatientProfile patientProfile = patientProfileRepository.findById(currentUser.getId())
-                .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bệnh nhân của tài khoản này.", HttpStatus.NOT_FOUND));
-        return processBooking(patientProfile, currentUser, dto);
+                .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bệnh nhân.", HttpStatus.NOT_FOUND));
+
+        // Bệnh nhân tự đặt -> Trạng thái PENDING
+        return processBooking(patientProfile, currentUser, dto, AppointmentStatus.PENDING);
     }
 
+    //Bệnh nhân gọi điện/đến trực tiếp gặp staff đặt lịch
     @Override
     @Transactional
     public AppointmentResponseDTO staffBookAppointment(UUID patientId, AppointmentRequestDTO dto) {
         User staffUser = SecurityUtils.getCurrentUser();
         PatientProfile patientProfile = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy hồ sơ bệnh nhân với ID: " + patientId, HttpStatus.NOT_FOUND));
-        return processBooking(patientProfile, staffUser, dto);
+
+        // Staff đặt hộ -> Trạng thái mặc định là CONFIRMED
+        return processBooking(patientProfile, staffUser, dto, AppointmentStatus.CONFIRMED);
     }
 
-    private AppointmentResponseDTO processBooking(PatientProfile patient, User createdBy, AppointmentRequestDTO dto) {
+
+    //Xử lý đặt lịch (từ patient và staff)
+    private AppointmentResponseDTO processBooking(PatientProfile patient, User createdBy, AppointmentRequestDTO dto, AppointmentStatus initialStatus) {
         Schedule schedule = scheduleRepository.findById(dto.getScheduleId())
                 .orElseThrow(() -> new CustomException("Lịch khám không tồn tại hoặc đã bị xóa.", HttpStatus.NOT_FOUND));
 
         if (schedule.getStatus() == ScheduleStatus.FULL || schedule.getStatus() == ScheduleStatus.CANCELLED) {
-            throw new CustomException("Lịch khám này đã đầy hoặc đã bị hủy bỏ không thể đặt thêm.");
+            throw new CustomException("Lịch khám này đã đầy hoặc đã bị hủy bỏ, không thể đặt thêm.", HttpStatus.BAD_REQUEST);
         }
 
         Appointment appointment = Appointment.builder()
@@ -67,7 +77,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .schedule(schedule)
                 .createdBy(createdBy)
                 .symptoms(dto.getSymptoms())
-                .status(AppointmentStatus.PENDING)
+                .status(initialStatus)
                 .build();
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
@@ -78,12 +88,14 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         scheduleRepository.save(schedule);
 
-        // Gửi thông báo cho bệnh nhân
+        // Thông báo
         String formattedDate = savedAppointment.getSchedule().getWorkDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        String message = String.format("Lịch hẹn của bạn với BS. %s vào lúc %s ngày %s đã được tạo thành công.",
+        String statusText = (initialStatus == AppointmentStatus.CONFIRMED) ? "đã được xác nhận" : "đang chờ xác nhận";
+        String message = String.format("Lịch hẹn của bạn với BS. %s vào lúc %s ngày %s đã được tạo và %s.",
                 savedAppointment.getDoctor().getUser().getFullName(),
                 savedAppointment.getSchedule().getTimeSlot().getStartTime(),
-                formattedDate);
+                formattedDate, statusText);
+
         notificationService.createNotification(patient.getUser(), message, "/patient/appointments");
 
         return appointmentMapper.toResponseDTO(savedAppointment);
@@ -95,40 +107,60 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy thông tin cuộc hẹn cần hủy.", HttpStatus.NOT_FOUND));
 
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED || appointment.getStatus() == AppointmentStatus.IN_PROGRESS) {
-            throw new CustomException("Cuộc hẹn đang diễn ra hoặc đã hoàn thành, không thể hủy bỏ.");
+        //  Kiểm tra trạng thái hiện tại
+        if (List.of(AppointmentStatus.CHECK_IN, AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED).contains(appointment.getStatus())) {
+            throw new CustomException("Không thể hủy cuộc hẹn đã check-in hoặc đang diễn ra.", HttpStatus.BAD_REQUEST);
+        }
+
+        //  Logic kiểm tra thời gian: Bệnh nhân phải hủy trước 2 tiếng
+        Schedule schedule = appointment.getSchedule();
+        LocalDateTime appointmentTime = LocalDateTime.of(schedule.getWorkDate(), schedule.getTimeSlot().getStartTime());
+
+        long hoursUntilAppointment = ChronoUnit.HOURS.between(LocalDateTime.now(), appointmentTime);
+        if (hoursUntilAppointment < 2) {
+            throw new CustomException("Chỉ có thể hủy lịch khám trước thời gian bắt đầu tối thiểu 2 tiếng.", HttpStatus.BAD_REQUEST);
         }
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setCancelReason(reason);
         appointmentRepository.save(appointment);
 
-        Schedule schedule = appointment.getSchedule();
+        // Trả lại slot khám
         schedule.setCurrentPatients(Math.max(0, schedule.getCurrentPatients() - 1));
         if (schedule.getStatus() == ScheduleStatus.FULL) {
             schedule.setStatus(ScheduleStatus.AVAILABLE);
         }
         scheduleRepository.save(schedule);
 
-        // Gửi thông báo hủy lịch
+        // Thông báo
         String formattedDate = schedule.getWorkDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         String message = String.format("Lịch hẹn của bạn vào lúc %s ngày %s đã bị hủy. Lý do: %s",
                 schedule.getTimeSlot().getStartTime(), formattedDate, reason);
         notificationService.createNotification(appointment.getPatient().getUser(), message, "/patient/appointments");
     }
 
+    //Staff cập nhật trang thái lịch hẹn (confirmed và check_in)
     @Override
     @Transactional
     public void updateAppointmentStatus(UUID appointmentId, AppointmentStatus status) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy thông tin cuộc hẹn.", HttpStatus.NOT_FOUND));
+
+        // Cập nhật trạng thái
         appointment.setStatus(status);
         appointmentRepository.save(appointment);
 
-        // Gửi thông báo khi check-in
-        if (status == AppointmentStatus.ARRIVED) {
-            String message = "Bạn đã check-in thành công. Vui lòng chờ đến lượt.";
-            notificationService.createNotification(appointment.getPatient().getUser(), message, null);
+        // Xử lý gửi thông báo dựa trên trạng thái mới
+        switch (status) {
+            case CONFIRMED -> {
+                String message = "Lịch hẹn của bạn đã được xác nhận.";
+                notificationService.createNotification(appointment.getPatient().getUser(), message, "/patient/appointments");
+            }
+            case CHECK_IN -> {
+                String message = "Bạn đã check-in thành công. Vui lòng chờ đến lượt.";
+                notificationService.createNotification(appointment.getPatient().getUser(), message, null);
+            }
+            default -> {} // Bỏ qua các trạng thái khác
         }
     }
 
@@ -171,7 +203,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public List<AppointmentResponseDTO> getDoctorUpcomingAppointments(UUID doctorId) {
-        List<AppointmentStatus> upcomingStatus = Arrays.asList(AppointmentStatus.PENDING, AppointmentStatus.ARRIVED);
+        List<AppointmentStatus> upcomingStatus = Arrays.asList(AppointmentStatus.PENDING, AppointmentStatus.CHECK_IN);
         List<Appointment> appointments = appointmentRepository.findByDoctor_DoctorIdAndStatusIn(doctorId, upcomingStatus);
         return appointments.stream()
                 .map(appointmentMapper::toResponseDTO)
@@ -184,20 +216,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy thông tin cuộc hẹn.", HttpStatus.NOT_FOUND));
 
-        // Bác sĩ chỉ có thể chuyển trạng thái sang IN_PROGRESS hoặc COMPLETED
         if (status != AppointmentStatus.IN_PROGRESS && status != AppointmentStatus.COMPLETED) {
-            throw new CustomException("Bác sĩ chỉ có thể cập nhật trạng thái là 'Đang khám' hoặc 'Hoàn thành'.", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Bác sĩ chỉ có thể chuyển trạng thái sang 'Đang khám' hoặc 'Hoàn tất'.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Bác sĩ chỉ được IN_PROGRESS nếu trạng thái trước đó là CHECK_IN
+        if (status == AppointmentStatus.IN_PROGRESS && appointment.getStatus() != AppointmentStatus.CHECK_IN) {
+            throw new CustomException("Bệnh nhân chưa Check-in, không thể bắt đầu khám.", HttpStatus.BAD_REQUEST);
         }
 
         appointment.setStatus(status);
         appointmentRepository.save(appointment);
 
-        // Gửi thông báo cho bệnh nhân khi khám xong
         if (status == AppointmentStatus.COMPLETED) {
-            String message = String.format("Cuộc hẹn ngày %s của bạn với BS. %s đã hoàn tất. Vui lòng xem chi tiết bệnh án.",
-                    appointment.getSchedule().getWorkDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+            String message = String.format("Cuộc hẹn với BS. %s đã hoàn tất. Vui lòng xem bệnh án.",
                     appointment.getDoctor().getUser().getFullName());
             notificationService.createNotification(appointment.getPatient().getUser(), message, "/patient/medical-records");
         }
     }
 }
+
