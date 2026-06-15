@@ -12,7 +12,7 @@ import { ROLE_HOME_ROUTE } from '../../utils/constants';
 import { getRedirectPath } from '../../utils/navigation';
 
 export default function Login() {
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = getRedirectPath(location.state);
@@ -25,8 +25,11 @@ export default function Login() {
   // Thông báo thành công từ trang Register
   const successMsg = location.state?.successMsg;
 
-  if (isAuthenticated) {
-    return <Navigate to={from || ROLE_HOME_ROUTE[user.role] || '/dashboard'} replace />;
+  // Nếu đã đăng nhập → redirect về đúng trang theo role HIỆN TẠI
+  // Không dùng `from` cũ vì có thể thuộc về user khác
+  if (isAuthenticated && user) {
+    const home = ROLE_HOME_ROUTE[user.beRole] || ROLE_HOME_ROUTE[user.role] || '/dashboard';
+    return <Navigate to={home} replace />;
   }
 
   const handleChange = e => {
@@ -44,8 +47,13 @@ export default function Login() {
     const result = await login({ email: form.email.trim(), password: form.password });
     setLoading(false);
     if (!result.ok) { setError(result.error); return; }
-    // Redirect đúng route theo role trả về từ BE
-    navigate(from || ROLE_HOME_ROUTE[result.role] || '/dashboard', { replace: true });
+
+    // Redirect theo role BE trả về — KHÔNG dùng `from` cũ (có thể của user khác)
+    // Chỉ dùng `from` nếu user đang cố vào trang yêu cầu login (booking, dashboard)
+    const rolePath = ROLE_HOME_ROUTE[result.role] || '/dashboard';
+    // from chỉ hợp lệ nếu là /booking/* (đặt lịch) — các path dashboard thì về đúng home
+    const isBookingFrom = from?.startsWith('/booking');
+    navigate(isBookingFrom ? from : rolePath, { replace: true });
   };
 
   return (

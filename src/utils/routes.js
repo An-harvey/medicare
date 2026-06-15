@@ -12,14 +12,15 @@ export const ROLE_PREFIX = {
 };
 
 export const ROLE_HOME = {
-  ADMIN:   '/admin/dashboard',
-  DOCTOR:  '/doctor/dashboard',
-  STAFF:   '/staff/dashboard',
-  PATIENT: '/patient/dashboard',
-  user:    '/patient/dashboard',
-  doctor:  '/doctor/dashboard',
-  admin:   '/admin/dashboard',
-  staff:   '/staff/dashboard',
+  // Tất cả role đều dùng /dashboard — Router nội bộ xử lý theo role
+  ADMIN:   '/dashboard',
+  DOCTOR:  '/dashboard',
+  STAFF:   '/dashboard',
+  PATIENT: '/dashboard',
+  user:    '/dashboard',
+  doctor:  '/dashboard',
+  admin:   '/dashboard',
+  staff:   '/dashboard',
 };
 
 /** Map lo_trinh path → /dashboard path (nội bộ) */

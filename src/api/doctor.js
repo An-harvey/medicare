@@ -1,48 +1,58 @@
 /**
  * doctorApi — /api/doctor  (Role: DOCTOR)
  * ──────────────────────────────────────────────────────────────────
+ * BE enum AppointmentStatus: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
  *
- * 24. PUT  /doctor/profile                      → DoctorDetailResponseDTO
- *     Body JSON: { imageUrl, expertiseDescription, biography }
- *     (nếu upload ảnh: multipart, field avatarFile)
- *
- * 25. GET  /doctor/schedules?date=yyyy-MM-dd    → ScheduleResponseDTO[]
- *
- * 26. GET  /doctor/appointments/history         → AppointmentResponseDTO[]
- *
- * 27. POST /doctor/medical-records              → MedicalRecordResponseDTO (201)
- *     Body: { appointmentId, clinicalDiagnosis, doctorNotes,
- *             diseases:[{diseaseId,isPrimary}],
- *             medicines:[{medicineId,quantity,dosageInstructions}] | null }
- *
- * 28. GET  /doctor/statistics                   → DoctorStatisticsResponseDTO
- *     { totalExaminedThisWeek, totalExaminedThisMonth, totalPendingAppointments }
+ * 24. PUT  /doctor/profile                          → DoctorDetailResponseDTO (multipart)
+ * 25. GET  /doctor/schedules?date=yyyy-MM-dd        → ScheduleResponseDTO[]
+ * 26. GET  /doctor/appointments/history             → AppointmentResponseDTO[]
+ * 27. GET  /doctor/appointments/upcoming            → AppointmentResponseDTO[] (PENDING+CHECK_IN)
+ * 28. PUT  /doctor/appointments/{id}/status?status= → 204 No Content
+ * 29. POST /doctor/medical-records                  → MedicalRecordResponseDTO (201)
+ *         → Tự động chuyển appointment → COMPLETED
+ * 30. PUT  /doctor/medical-records/{id}             → MedicalRecordResponseDTO
+ *         fields: { diagnosis, notes }  ← KHÁC với field tạo mới
+ * 31. GET  /doctor/statistics                       → DoctorStatisticsResponseDTO
+ * 32. GET  /doctor/patients/{patientId}/profile     → PatientProfileResponseDTO
  */
 import api from './config';
 
-/* ── Hồ sơ bác sĩ — BẮT BUỘC multipart/form-data, field `dto` (lo_trinh.txt §13.3) ── */
+/* ── Hồ sơ bác sĩ — multipart/form-data ── */
 export const doctorUpdateProfile = (dto, avatarFile) => {
   const form = new FormData();
-  form.append('dto', JSON.stringify({
-    imageUrl:             dto.imageUrl             ?? null,
-    expertiseDescription: dto.expertiseDescription ?? null,
-    biography:            dto.biography            ?? null,
-  }));
+  const jsonBlob = new Blob([JSON.stringify({
+        imageUrl: dto.imageUrl ?? null,
+        expertiseDescription: dto.expertiseDescription ?? null, 
+        biography: dto.biography ?? null,
+    })], { type: 'application/json' });
+
+    form.append('dto', jsonBlob);
+  // form.append('dto', JSON.stringify({
+  //   imageUrl:             dto.imageUrl             ?? null,
+  //   expertiseDescription: dto.expertiseDescription ?? null,
+  //   biography:            dto.biography            ?? null,
+  // }));
   if (avatarFile) form.append('avatarFile', avatarFile);
-  return api.put('/doctor/profile', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  return api.put('/doctor/profile', form);
 };
 
 /* ── Lịch làm việc theo ngày ── */
 export const doctorGetSchedulesByDate = (date) =>
-  api.get('/doctor/schedules', { params: { date } }); // date: "yyyy-MM-dd"
+  api.get('/doctor/schedules', { params: { date } });
 
-/* ── Lịch sử cuộc hẹn ── */
+/* ── Lịch sử cuộc hẹn (tất cả status) ── */
 export const doctorGetAppointmentHistory = () =>
   api.get('/doctor/appointments/history');
 
-/* ── Tạo bệnh án (sau khi khám) ── */
+/**
+ * doctorGetUpcomingAppointments — Danh sách chờ khám (lo_trinh.txt Bước 3)
+ * BE có endpoint riêng. Trả về PENDING + CHECK_IN.
+ * FE sort: CHECK_IN lên trên PENDING.
+ */
+export const doctorGetUpcomingAppointments = () =>
+  api.get('/doctor/appointments/upcoming');
+
+/* ── Tạo bệnh án ── */
 export const doctorCreateMedicalRecord = (data) =>
   api.post('/doctor/medical-records', {
     appointmentId:     data.appointmentId,
@@ -58,35 +68,43 @@ export const doctorCreateMedicalRecord = (data) =>
           quantity:           m.quantity,
           dosageInstructions: m.dosageInstructions,
         }))
-      : null, // null nếu không kê đơn
+      : null,
   });
 
 /* ── Thống kê hiệu suất ── */
 export const doctorGetStatistics = () =>
   api.get('/doctor/statistics');
 
-/* ── Bổ sung lo_trinh.txt §13.3 ── */
-export const doctorGetUpcomingAppointments = () =>
-  api.get('/doctor/appointments/upcoming');
-
+/* ── Cập nhật trạng thái lịch hẹn (doctor) ── */
 export const doctorUpdateAppointmentStatus = (id, status) =>
   api.put(`/doctor/appointments/${id}/status`, null, { params: { status } });
 
+/* ── Hồ sơ bệnh án ── */
 export const doctorGetMedicalRecords = () =>
   api.get('/doctor/medical-records');
 
 export const doctorGetMedicalRecordDetails = (id) =>
   api.get(`/doctor/medical-records/${id}`);
 
+/**
+ * doctorUpdateMedicalRecord — Sửa bệnh án (lo_trinh.txt Bước 7)
+ * ⚠️ Field name KHÁC với khi tạo:
+ *   - Tạo dùng: clinicalDiagnosis, doctorNotes
+ *   - Sửa dùng: diagnosis, notes
+ * Chỉ sửa được diagnosis và notes, KHÔNG sửa được diseases/medicines
+ */
 export const doctorUpdateMedicalRecord = (id, data) =>
-  api.put(`/doctor/medical-records/${id}`, data);
+  api.put(`/doctor/medical-records/${id}`, {
+    diagnosis: data.diagnosis,
+    notes:     data.notes,
+  });
 
 export const doctorGetPatientProfile = (patientId) =>
   api.get(`/doctor/patients/${patientId}/profile`);
 
-// ── Alias exports (tương thích với các component cũ) ──
-export const updateDoctorProfile          = doctorUpdateProfile;
-export const getDoctorSchedulesByDate     = doctorGetSchedulesByDate;
-export const getDoctorAppointmentHistory  = doctorGetAppointmentHistory;
-export const createMedicalRecord          = doctorCreateMedicalRecord;
-export const getDoctorStatistics          = doctorGetStatistics;
+// ── Alias exports ──
+export const updateDoctorProfile         = doctorUpdateProfile;
+export const getDoctorSchedulesByDate    = doctorGetSchedulesByDate;
+export const getDoctorAppointmentHistory = doctorGetAppointmentHistory;
+export const createMedicalRecord         = doctorCreateMedicalRecord;
+export const getDoctorStatistics         = doctorGetStatistics;

@@ -13,7 +13,7 @@
  */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { authLogin, authRegister } from '../api/auth';
-import { BE_TO_FE_ROLE, ROLE_LABEL, ROLE_HOME_ROUTE } from '../utils/constants';
+import { BE_TO_FE_ROLE, ROLE_LABEL, ROLE_HOME_ROUTE, getImageUrl } from '../utils/constants';
 
 const AuthContext = createContext(null);
 
@@ -66,6 +66,29 @@ export function AuthProvider({ children }) {
       // POST /api/auth/login → { token, email, role }
       const res = await authLogin({ email, password });
       const userData = buildUser(res.email, res.role, res.token);
+
+      // ── Load avatar ngay sau khi login ──
+      // Gọi profile API để lấy imageUrl (không block login nếu lỗi)
+      try {
+        if (res.role === 'PATIENT') {
+          // Lazy import để tránh circular dependency
+          const { patientGetProfile } = await import('../api/patient');
+          const profile = await patientGetProfile();
+          if (profile?.imageUrl) {
+            userData.avatarUrl = getImageUrl(profile.imageUrl);
+          }
+          if (profile?.fullName) {
+            userData.name = profile.fullName;
+          }
+        } else if (res.role === 'DOCTOR') {
+          // Doctor profile nếu BE có endpoint (optional)
+          // const { doctorGetProfile } = await import('../api/doctor');
+          // const profile = await doctorGetProfile();
+        }
+      } catch {
+        // Không load được avatar → dùng null (không sao)
+      }
+
       setUser(userData);
       setLoading(false);
       return { ok: true, role: res.role };
@@ -92,7 +115,11 @@ export function AuthProvider({ children }) {
   };
 
   /* ─────────── ĐĂNG XUẤT ─────────── */
-  const logout = () => setUser(null);
+  const logout = () => {
+    // Xóa session ngay lập tức (đồng bộ) trước khi setState
+    clearSession();
+    setUser(null);
+  };
 
   /* Cập nhật thông tin user local sau khi sửa profile */
   const updateLocalUser = (patch) =>

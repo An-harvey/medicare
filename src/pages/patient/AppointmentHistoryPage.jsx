@@ -14,14 +14,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMyAppointments } from '../../hooks/useAppointments';
 
-// ── Map BE status enum → FE display ──
+// ── Map BE status enum → FE display — đúng theo BE enum ──
+// BE: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
 const STATUS_MAP = {
   PENDING:     { label: 'Chờ xác nhận', cls: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  ARRIVED:     { label: 'Đã đến',       cls: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
-  IN_PROGRESS: { label: 'Đang khám',    cls: 'bg-green-100 text-green-700',   dot: 'bg-green-500' },
-  COMPLETED:   { label: 'Đã khám',      cls: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400' },
-  CANCELLED:   { label: 'Đã hủy',       cls: 'bg-red-100 text-red-700',       dot: 'bg-red-400' },
-  NO_SHOW:     { label: 'Không đến',    cls: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400' },
+  CONFIRMED:   { label: 'Đã xác nhận',  cls: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
+  CHECK_IN:    { label: 'Đã check-in',  cls: 'bg-cyan-100 text-cyan-700',    dot: 'bg-cyan-500' },
+  IN_PROGRESS: { label: 'Đang khám',    cls: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
+  COMPLETED:   { label: 'Đã khám',      cls: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
+  CANCELLED:   { label: 'Đã hủy',       cls: 'bg-red-100 text-red-700',      dot: 'bg-red-400' },
 };
 
 // ── Tabs phân loại lịch hẹn ──
@@ -52,15 +53,17 @@ export default function MyBookings() {
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [toast, setToast] = useState(''); // thông báo thành công
 
   // ── PATIENT: lấy danh sách lịch hẹn từ API ──
   const { data: appointments, loading, error, refetch, cancel } = useMyAppointments();
 
   // ── Filter theo tab ──
   const filtered = appointments.filter(b => {
-    if (tab === 'upcoming')  return ['PENDING','ARRIVED','IN_PROGRESS'].includes(b.status);
+    if (tab === 'upcoming')  return ['PENDING','CONFIRMED','CHECK_IN','IN_PROGRESS'].includes(b.status);
     if (tab === 'done')      return b.status === 'COMPLETED';
-    if (tab === 'cancelled') return ['CANCELLED','NO_SHOW'].includes(b.status);
+    if (tab === 'cancelled') return b.status === 'CANCELLED';
     return true;
   });
 
@@ -68,12 +71,25 @@ export default function MyBookings() {
   const handleCancel = async () => {
     if (!detail) return;
     setCancelling(true);
+    setCancelError('');
     try {
-      await cancel(detail.appointmentId, cancelReason || 'Bệnh nhân tự hủy');
+      await cancel(detail.appointmentId, cancelReason.trim() || 'Bệnh nhân tự hủy');
       setShowCancelModal(false);
       setDetail(null);
-    } catch { /* lỗi đã được xử lý trong hook */ }
-    finally { setCancelling(false); }
+      setCancelReason('');
+      setToast('Đã hủy lịch hẹn thành công.');
+      setTimeout(() => setToast(''), 3000);
+    } catch (e) {
+      setCancelError(e?.message || 'Hủy lịch thất bại. Vui lòng thử lại.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const openCancelModal = () => {
+    setCancelError('');
+    setCancelReason('');
+    setShowCancelModal(true);
   };
 
   const getStatus = (s) => STATUS_MAP[s] || { label: s, cls: 'bg-gray-100 text-gray-500', dot: 'bg-gray-400' };
@@ -87,6 +103,13 @@ export default function MyBookings() {
 
   return (
     <div className="p-4 md:p-6 space-y-5">
+      {/* Toast thành công */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2">
+          ✅ {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -111,9 +134,9 @@ export default function MyBookings() {
         {TABS.map(t => {
           const count = appointments.filter(b => {
             if (t.key === 'all')       return true;
-            if (t.key === 'upcoming')  return ['PENDING','ARRIVED','IN_PROGRESS'].includes(b.status);
+            if (t.key === 'upcoming')  return ['PENDING','CONFIRMED','CHECK_IN','IN_PROGRESS'].includes(b.status);
             if (t.key === 'done')      return b.status === 'COMPLETED';
-            if (t.key === 'cancelled') return ['CANCELLED','NO_SHOW'].includes(b.status);
+            if (t.key === 'cancelled') return b.status === 'CANCELLED';
             return false;
           }).length;
           return (
@@ -166,7 +189,7 @@ export default function MyBookings() {
         <div>
           {detail ? (() => {
             const st = getStatus(detail.status);
-            const canCancel = ['PENDING'].includes(detail.status);
+            const canCancel = ['PENDING', 'CONFIRMED'].includes(detail.status);
             return (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -191,12 +214,17 @@ export default function MyBookings() {
                   <span className={`w-2 h-2 rounded-full ${st.dot}`}></span>
                   {st.label}
                 </span>
-                {canCancel && (
-                  <button onClick={() => setShowCancelModal(true)}
+                {/* Chỉ cho hủy khi PENDING hoặc CONFIRMED — chưa check-in */}
+                {canCancel ? (
+                  <button onClick={openCancelModal}
                     className="w-full border border-red-200 text-red-600 text-xs font-bold py-2.5 rounded-xl hover:bg-red-50 transition-colors">
-                    Hủy lịch hẹn
+                    🚫 Hủy lịch hẹn
                   </button>
-                )}
+                ) : ['CHECK_IN','IN_PROGRESS'].includes(detail.status) ? (
+                  <p className="text-xs text-gray-400 text-center bg-gray-50 rounded-xl py-2.5">
+                    Không thể hủy — bệnh nhân đã check-in
+                  </p>
+                ) : null}
               </div>
             );
           })() : (
@@ -213,19 +241,43 @@ export default function MyBookings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCancelModal(false)} />
           <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full z-10">
-            <h3 className="font-bold text-gray-800 mb-3">Xác nhận hủy lịch hẹn</h3>
-            <p className="text-sm text-gray-500 mb-4">Vui lòng cho biết lý do hủy:</p>
-            <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)}
-              rows={3} placeholder="Bận việc đột xuất, đổi lịch..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none mb-4" />
+            <h3 className="font-bold text-gray-800 mb-1">Xác nhận hủy lịch hẹn</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Bác sĩ: <strong>{detail?.doctorName}</strong>
+            </p>
+
+            {/* Lỗi từ API */}
+            {cancelError && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-700">
+                ⚠️ {cancelError}
+              </div>
+            )}
+
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Lý do hủy (không bắt buộc)
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              rows={3}
+              placeholder="Bận việc đột xuất, đổi lịch..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none mb-4"
+            />
             <div className="flex gap-3">
-              <button onClick={() => setShowCancelModal(false)}
-                className="flex-1 border border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl text-sm hover:bg-gray-50">
+              <button
+                onClick={() => { setShowCancelModal(false); setCancelError(''); }}
+                className="flex-1 border border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl text-sm hover:bg-gray-50"
+              >
                 Giữ lịch
               </button>
-              <button onClick={handleCancel} disabled={cancelling}
-                className="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-red-700 disabled:opacity-60">
-                {cancelling ? 'Đang hủy...' : 'Xác nhận hủy'}
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {cancelling
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Đang hủy...</>
+                  : 'Xác nhận hủy'}
               </button>
             </div>
           </div>

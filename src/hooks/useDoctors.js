@@ -6,7 +6,6 @@
  *   { id, fullName, imageUrl, academicTitle, specialtyName, experienceYears }
  *
  * Ảnh: GET http://localhost:8080/api/images/{imageUrl}
- * Fallback: mockData khi BE chưa chạy
  */
 import { useState, useEffect } from 'react';
 import { getDoctors } from '../api/public';
@@ -23,7 +22,7 @@ export function useDoctors(params = {}) {
     setLoading(true);
     setError(null);
 
-    // Chỉ gửi specialtyId nếu là số nguyên (BE dùng Integer, mock dùng string)
+    // Chỉ gửi specialtyId nếu là số nguyên (BE dùng Integer)
     const beParams = { ...params };
     if (beParams.specialtyId && isNaN(Number(beParams.specialtyId))) {
       delete beParams.specialtyId;

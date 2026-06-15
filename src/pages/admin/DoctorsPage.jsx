@@ -40,10 +40,7 @@ function AcademicModal({ doctor, onClose, onSaved }) {
       onSaved();
       onClose();
     } catch (err) {
-      // Fallback mock
-      console.warn('Update academic failed, using mock fallback:', err.message);
-      onSaved(); // giả lập thành công
-      onClose();
+      setError(err.message || 'Cập nhật thất bại. Vui lòng thử lại.');
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getDoctorById, getAvailableSlots } from '../api/public';
+import { getDoctors, getAvailableSlots } from '../api/public';
 import { mapDoctorFromApi } from '../utils/doctorMapper';
 import { unwrapList } from '../utils/apiHelpers';
 import BookDoctorButton from '../components/common/BookDoctorButton';
@@ -43,8 +43,13 @@ export default function DoctorDetail() {
   useEffect(() => {
     if (!id) { setLoading(false); return; }
     setLoading(true);
-    getDoctorById(id)
-      .then(res => setDoctor(mapDoctorFromApi(res)))
+    // BE chưa có GET /public/doctors/{id} → lấy danh sách rồi filter
+    getDoctors({})
+      .then(res => {
+        const list = unwrapList(res);
+        const found = list.find(d => String(d.id) === String(id));
+        setDoctor(found ? mapDoctorFromApi(found) : null);
+      })
       .catch(() => setDoctor(null))
       .finally(() => setLoading(false));
   }, [id]);

@@ -1,53 +1,51 @@
 /**
- * BookDoctorButton — Nút/link đặt lịch thống nhất toàn app
- * Chưa đăng nhập → /login (quay lại trang booking sau khi login)
+ * BookDoctorButton — Nút đặt lịch khám
+ * ─────────────────────────────────────
+ * - Nếu đã đăng nhập (PATIENT): redirect đến /booking/:doctorId
+ * - Nếu chưa đăng nhập: redirect đến /login với state.from
+ * - Nếu đăng nhập bằng role khác (ADMIN/DOCTOR/STAFF): hiện thông báo
  */
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
-export function bookingPath(doctorId) {
-  if (doctorId == null || doctorId === '') return '/doctors';
-  return `/booking/${doctorId}`;
-}
 
 export default function BookDoctorButton({
   doctorId,
-  children = 'Đặt lịch',
-  className = '',
-  variant = 'button',
   from,
+  children = 'Đặt lịch khám',
+  className = '',
+  disabled = false,
 }) {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const path = bookingPath(doctorId);
-  const backFrom = from || (doctorId ? `/doctors/${doctorId}` : '/doctors');
+  const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
 
-  const go = (e) => {
-    e?.preventDefault();
+  const handleClick = () => {
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: { pathname: path } } });
+      // Chưa đăng nhập → về login với from state
+      navigate('/login', {
+        state: { from: { pathname: from || `/booking/${doctorId}` } },
+      });
       return;
     }
-    navigate(path, { state: { from: backFrom } });
+
+    const isPatient = user?.beRole === 'PATIENT' || user?.role === 'user';
+    if (!isPatient) {
+      alert('Chỉ tài khoản bệnh nhân mới được đặt lịch online.\nVui lòng đăng nhập bằng tài khoản bệnh nhân.');
+      return;
+    }
+
+    navigate(`/booking/${doctorId}`, {
+      state: { from: { pathname: location.pathname } },
+    });
   };
 
-  if (variant === 'link') {
-    if (!isAuthenticated) {
-      return (
-        <button type="button" onClick={go} className={className}>
-          {children}
-        </button>
-      );
-    }
-    return (
-      <Link to={path} state={{ from: backFrom }} className={className}>
-        {children}
-      </Link>
-    );
-  }
-
   return (
-    <button type="button" onClick={go} className={className}>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      className={className}
+    >
       {children}
     </button>
   );

@@ -24,7 +24,7 @@
  *
  * AppointmentResponseDTO:
  *   { appointmentId, patientName, doctorName, workDate, startTime, symptoms, status, cancelReason }
- * AppointmentStatus: PENDING | ARRIVED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW
+ * AppointmentStatus: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
  */
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -37,8 +37,7 @@ import {
   doctorGetStatistics,
   doctorGetUpcomingAppointments,
   doctorUpdateAppointmentStatus,
-} from '../api/doctor';
-import {
+} from '../api/doctor';import {
   staffSearchAppointments,
   staffUpdateAppointmentStatus,
 } from '../api/staff';
@@ -116,24 +115,51 @@ export function useDoctorHistory() {
   return { data, loading, error, refetch: fetch };
 }
 
-/* ════════════ DOCTOR: lịch hẹn sắp tới ═════════════ */
+/* ════════════ DOCTOR: lịch hẹn sắp tới (cần khám) ═════════════ */
 export function useDoctorUpcoming() {
   const [data,    setData]    = useState([]);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
+
+  // Sort order: CHECK_IN (đã đến) > IN_PROGRESS (đang khám) > PENDING > CONFIRMED
+  const SORT_ORDER = { CHECK_IN: 0, IN_PROGRESS: 1, PENDING: 2, CONFIRMED: 3 };
+  // Tất cả status bác sĩ cần thấy
+  const ACTIVE = new Set(['PENDING', 'CONFIRMED', 'CHECK_IN', 'IN_PROGRESS']);
 
   const fetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await doctorGetUpcomingAppointments();
-      setData(Array.isArray(res) ? res : []);
+      const all = Array.isArray(res) ? res : [];
+      // Giữ lại tất cả active (BE có thể trả thêm IN_PROGRESS)
+      // Nếu BE chỉ trả PENDING+CHECK_IN, vẫn đúng
+      const active = all.filter(a => ACTIVE.has(a.status));
+      const sorted = [...active].sort((a, b) =>
+        (SORT_ORDER[a.status] ?? 9) - (SORT_ORDER[b.status] ?? 9)
+      );
+      setData(sorted);
     } catch (e) {
-      setError(e.message || 'Lỗi tải lịch hẹn sắp tới');
-      setData([]);
+      // Fallback: nếu /upcoming 404/405 → dùng /history filter FE
+      if (e?.status === 404 || e?.status === 405) {
+        try {
+          const res2 = await doctorGetAppointmentHistory();
+          const active = (Array.isArray(res2) ? res2 : [])
+            .filter(a => ACTIVE.has(a.status))
+            .sort((a, b) => (SORT_ORDER[a.status] ?? 9) - (SORT_ORDER[b.status] ?? 9));
+          setData(active);
+        } catch {
+          setData([]);
+          setError('Không thể tải danh sách chờ khám');
+        }
+      } else {
+        setError(e?.message || 'Lỗi tải danh sách chờ khám');
+        setData([]);
+      }
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { fetch(); }, [fetch]);

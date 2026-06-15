@@ -1,36 +1,38 @@
 /**
  * constants.js — Toàn bộ enum, label, config dùng chung
  * ──────────────────────────────────────────────────────
- * Nguồn: lo_trinh.txt + api_backend.txt
+ * Nguồn: lo_trinh.txt + BE enum AppointmentStatus.java
+ *
+ * BE enum: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
  */
 
-// ── Appointment Status (từ BE enum AppointmentStatus.java) ──
+// ── Appointment Status — đúng theo BE enum ──
 export const APPOINTMENT_STATUS = {
   PENDING:     { label: 'Chờ xác nhận', color: 'yellow' },
-  ARRIVED:     { label: 'Đã đến',       color: 'blue' },
+  CONFIRMED:   { label: 'Đã xác nhận',  color: 'blue' },
+  CHECK_IN:    { label: 'Đã check-in',  color: 'cyan' },
   IN_PROGRESS: { label: 'Đang khám',    color: 'green' },
   COMPLETED:   { label: 'Hoàn tất',     color: 'gray' },
   CANCELLED:   { label: 'Đã hủy',       color: 'red' },
-  NO_SHOW:     { label: 'Vắng mặt',     color: 'orange' },
 };
 
 // ── Tailwind badge class theo status ──
 export const STATUS_BADGE = {
   PENDING:     'bg-yellow-100 text-yellow-700',
-  ARRIVED:     'bg-blue-100 text-blue-700',
+  CONFIRMED:   'bg-blue-100 text-blue-700',
+  CHECK_IN:    'bg-cyan-100 text-cyan-700',
   IN_PROGRESS: 'bg-green-100 text-green-700',
   COMPLETED:   'bg-gray-100 text-gray-600',
   CANCELLED:   'bg-red-100 text-red-700',
-  NO_SHOW:     'bg-orange-100 text-orange-700',
 };
 
 export const STATUS_DOT = {
   PENDING:     'bg-yellow-500',
-  ARRIVED:     'bg-blue-500',
+  CONFIRMED:   'bg-blue-500',
+  CHECK_IN:    'bg-cyan-500',
   IN_PROGRESS: 'bg-green-500',
   COMPLETED:   'bg-gray-400',
   CANCELLED:   'bg-red-400',
-  NO_SHOW:     'bg-orange-400',
 };
 
 // ── Schedule Status (từ BE enum ScheduleStatus.java) ──
@@ -75,8 +77,20 @@ export const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '') || 'http://localho
 export const IMAGE_BASE_URL = `${API_BASE_URL}/images`;
 
 // ── Hàm lấy URL ảnh từ imageUrl trả về BE ──
-export const getImageUrl = (imageUrl) =>
-  imageUrl ? `${IMAGE_BASE_URL}/${imageUrl}` : null;
+// BE có thể trả:
+//   - Chỉ tên file:  "abc.jpg"             → ghép thành http://localhost:8080/api/images/abc.jpg
+//   - Full path:     "/api/images/abc.jpg" → ghép thành http://localhost:8080/api/images/abc.jpg
+//   - Full URL:      "http://..."          → dùng thẳng
+export const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  // Đã là full URL
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+  // Chứa "/api/images/" → chỉ lấy phần sau
+  const match = imageUrl.match(/\/api\/images\/(.+)/);
+  if (match) return `${IMAGE_BASE_URL}/${match[1]}`;
+  // Chỉ là tên file
+  return `${IMAGE_BASE_URL}/${imageUrl}`;
+};
 
 import { ROLE_HOME } from './routes';
 

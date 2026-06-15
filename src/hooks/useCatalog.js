@@ -2,32 +2,39 @@
  * useCatalog — Hooks lấy danh mục hệ thống
  * ─────────────────────────────────────────
  *
- * useSpecialties()  → GET /api/public/specialties   (không cần token)
- *   Response: Specialty[] [{id, name, description}]
+ * useSpecialties()  → GET /api/public/specialties   (public)
  *
- * useDiseases(params)  → GET /api/admin/diseases    (cần ADMIN token)
- *   Response: Page<DiseaseResponseDTO> → dùng content[]
- *   {id, code, name, description}
+ * useDiseases()     → thử theo thứ tự:
+ *   1. GET /api/doctor/diseases   (nếu BE đã mở)
+ *   2. GET /api/public/diseases   (nếu BE đã mở)
+ *   3. GET /api/admin/diseases    (fallback, chỉ dùng được khi ADMIN token)
  *
- * useMedicines(params) → GET /api/admin/medicines   (cần ADMIN token)
- *   Response: Page<MedicineResponseDTO> → dùng content[]
- *   {id, name, unit, usageInstructions}
- *
- * useTimeSlots()       → GET /api/admin/time-slots  (cần ADMIN token)
- *   Response: TimeSlotResponseDTO[] [{id, startTime, status}]
- *
- * Fallback: mock data khi BE chưa chạy hoặc lỗi network
+ * useMedicines()    → thử theo thứ tự:
+ *   1. GET /api/doctor/medicines  (nếu BE đã mở)
+ *   2. GET /api/public/medicines  (nếu BE đã mở)
+ *   3. GET /api/admin/medicines   (fallback, chỉ dùng được khi ADMIN token)
  */
 import { useState, useEffect } from 'react';
-import { getSpecialties }  from '../api/public';
-import {
-  adminGetDiseases,
-  adminGetMedicines,
-  adminGetTimeSlots,
-} from '../api/admin';
+import { getSpecialties } from '../api/public';
+import { adminGetDiseases, adminGetMedicines, adminGetTimeSlots } from '../api/admin';
+import api from '../api/config';
 
-/* Generic fetch helper */
-function useFetchList(apiFn, transform, fallback = []) {
+/* ── Thử nhiều endpoint theo thứ tự ưu tiên ── */
+async function tryEndpoints(endpoints) {
+  for (const { fn, transform } of endpoints) {
+    try {
+      const res = await fn();
+      const raw = Array.isArray(res) ? res : (res?.content ?? []);
+      return transform ? raw.map(transform) : raw;
+    } catch {
+      // thử endpoint tiếp theo
+    }
+  }
+  return [];
+}
+
+/* Generic hook */
+function useFetchList(fetchFn, fallback = []) {
   const [data,    setData]    = useState(fallback);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
@@ -35,14 +42,15 @@ function useFetchList(apiFn, transform, fallback = []) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiFn()
-      .then(res => {
-        if (cancelled) return;
-        // Hỗ trợ cả List trực tiếp và Page wrapper
-        const raw = Array.isArray(res) ? res : res?.content ?? [];
-        setData(transform ? raw.map(transform) : raw);
+    setError(null);
+    fetchFn()
+      .then(result => { if (!cancelled) setData(result); })
+      .catch(e => {
+        if (!cancelled) {
+          setError(e?.message || 'Lỗi tải dữ liệu');
+          setData(fallback);
+        }
       })
-      .catch(() => { if (!cancelled) setData(fallback); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,41 +59,55 @@ function useFetchList(apiFn, transform, fallback = []) {
   return { data, loading, error };
 }
 
-/* ── Public: chuyên khoa (không cần token) ── */
+/* ── Public: chuyên khoa ── */
 export const useSpecialties = () =>
-  useFetchList(
-    getSpecialties,
-    // Normalize: BE trả { id: Integer, name, description }
-    // Mock dùng { id: 'cardiology', name, icon, desc } — giữ nguyên cả 2
-    s => ({ ...s, desc: s.description, icon: s.icon || '🏥' }),
-    [],
+  useFetchList(() =>
+    getSpecialties().then(res => {
+      const raw = Array.isArray(res) ? res : [];
+      return raw.map(s => ({ ...s, desc: s.description, icon: s.icon || '🏥' }));
+    })
   );
 
-/* ── Admin: danh mục bệnh lý ── */
+/* ── Bệnh lý — thử doctor → public → admin ── */
+const diseaseTransform = d => ({ id: d.id, code: d.code, name: d.name, description: d.description });
+
 export const useDiseases = () =>
-  useFetchList(
-    () => adminGetDiseases({ page: 0, size: 500 }),
-    d => ({ id: d.id, code: d.code, name: d.name, description: d.description }),
-    [],
+  useFetchList(() =>
+    tryEndpoints([
+      // 1. Doctor endpoint (khi BE bổ sung)
+      { fn: () => api.get('/doctor/diseases', { params: { page: 0, size: 500 } }), transform: diseaseTransform },
+      // 2. Public endpoint (khi BE bổ sung)
+      { fn: () => api.get('/public/diseases', { params: { page: 0, size: 500 } }), transform: diseaseTransform },
+      // 3. Admin endpoint (fallback — chỉ admin token mới dùng được)
+      { fn: () => adminGetDiseases({ page: 0, size: 500 }), transform: diseaseTransform },
+    ])
   );
 
-/* ── Admin/Doctor: danh mục thuốc ── */
+/* ── Thuốc — thử doctor → public → admin ── */
+const medicineTransform = m => ({
+  id:           m.id,
+  name:         m.name,
+  unit:         m.unit,
+  instructions: m.usageInstructions,
+});
+
 export const useMedicines = () =>
-  useFetchList(
-    () => adminGetMedicines({ page: 0, size: 1000 }),
-    m => ({
-      id:           m.id,
-      name:         m.name,
-      unit:         m.unit,
-      instructions: m.usageInstructions,
-    }),
-    [],
+  useFetchList(() =>
+    tryEndpoints([
+      // 1. Doctor endpoint (khi BE bổ sung)
+      { fn: () => api.get('/doctor/medicines', { params: { page: 0, size: 1000 } }), transform: medicineTransform },
+      // 2. Public endpoint (khi BE bổ sung)
+      { fn: () => api.get('/public/medicines', { params: { page: 0, size: 1000 } }), transform: medicineTransform },
+      // 3. Admin endpoint (fallback)
+      { fn: () => adminGetMedicines({ page: 0, size: 1000 }), transform: medicineTransform },
+    ])
   );
 
-/* ── Admin: time slots ── */
+/* ── Time slots ── */
 export const useTimeSlots = () =>
-  useFetchList(
-    adminGetTimeSlots,
-    t => ({ id: t.id, startTime: t.startTime, status: t.status }),
-    [],
+  useFetchList(() =>
+    adminGetTimeSlots().then(res => {
+      const raw = Array.isArray(res) ? res : [];
+      return raw.map(t => ({ id: t.id, startTime: t.startTime, status: t.status }));
+    })
   );

@@ -30,6 +30,7 @@ export const patientGetProfile = () =>
 
 export const patientUpdateProfile = (dto, avatarFile) => {
   // BE nhận multipart/form-data: field "data" là JSON string + "avatarFile" optional
+  // KHÔNG set Content-Type thủ công — để axios/browser tự set với boundary đúng
   const form = new FormData();
   form.append('data', JSON.stringify({
     dob:                    dto.dob                    || null,
@@ -40,9 +41,7 @@ export const patientUpdateProfile = (dto, avatarFile) => {
     imageUrl:               dto.imageUrl               || null,
   }));
   if (avatarFile) form.append('avatarFile', avatarFile);
-  return api.post('/patient/profile', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  return api.post('/patient/profile', form);
 };
 
 /* ── Appointments ── */
@@ -63,6 +62,14 @@ export const patientCancelAppointment = (id, reason = 'Bệnh nhân tự hủy')
 export const patientGetMedicalRecords = () =>
   api.get('/patient/medical-records');
 
+/**
+ * patientGetMedicalRecordDetails — Chi tiết 1 bệnh án (lo_trinh.txt Bước 8)
+ * GET /patient/medical-records/{id}
+ * Response: MedicalRecordDetailResponseDTO
+ *   { medicalRecordId, appointmentId, patientName, doctorName, specialtyName,
+ *     workDate, clinicalDiagnosis, doctorNotes, diagnosedDiseases: string[],
+ *     prescription: { prescriptionId, dispenseStatus, items: [{medicineName,unit,quantity,dosageInstructions}] } | null }
+ */
 export const patientGetMedicalRecordDetails = (id) =>
   api.get(`/patient/medical-records/${id}`);
 

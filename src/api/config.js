@@ -18,11 +18,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Đính kèm JWT vào mọi request ──
+// ── Đính kèm JWT + xóa Content-Type khi gửi FormData ──
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('mc_token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    // Nếu body là FormData → xóa Content-Type để browser tự set với boundary đúng
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => Promise.reject(error),

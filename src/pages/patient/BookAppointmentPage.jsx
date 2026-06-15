@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getAvailableSlots, getDoctorById } from '../../api/public';
+import { getAvailableSlots, getDoctors } from '../../api/public';
 import { getPatientProfile, bookAppointment } from '../../api/patient';
 import { mapDoctorFromApi } from '../../utils/doctorMapper';
 import { unwrapList } from '../../utils/apiHelpers';
@@ -122,14 +122,17 @@ export default function BookAppointmentPage() {
     }
     setDoctorLoading(true);
     setDoctorError('');
-    getDoctorById(doctorId)
+    // BE chưa có GET /public/doctors/{id} → lấy danh sách rồi filter
+    getDoctors({})
       .then(res => {
-        if (!res) {
+        const list = unwrapList(res);
+        const found = list.find(d => String(d.id) === String(doctorId));
+        if (!found) {
           setDoctor(null);
           setDoctorError('Không tìm thấy bác sĩ. Vui lòng chọn lại từ danh sách.');
           return;
         }
-        setDoctor(mapDoctorFromApi(res));
+        setDoctor(mapDoctorFromApi(found));
       })
       .catch(err => {
         setDoctor(null);

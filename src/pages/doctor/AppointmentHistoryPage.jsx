@@ -9,13 +9,15 @@ import { useDoctorHistory } from '../../hooks/useAppointments';
 import { doctorUpdateAppointmentStatus } from '../../api/doctor';
 import { formatDate, formatTime } from '../../utils/formatters';
 
+// ── Doctor: đúng theo BE enum ──
+// PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
 const STATUS_MAP = {
   PENDING:     { label: 'Chờ xác nhận', cls: 'bg-yellow-100 text-yellow-700' },
-  ARRIVED:     { label: 'Đã đến',       cls: 'bg-blue-100 text-blue-700' },
+  CONFIRMED:   { label: 'Đã xác nhận',  cls: 'bg-blue-100 text-blue-700' },
+  CHECK_IN:    { label: 'Đã check-in',  cls: 'bg-cyan-100 text-cyan-700' },
   IN_PROGRESS: { label: 'Đang khám',    cls: 'bg-green-100 text-green-700' },
   COMPLETED:   { label: 'Hoàn tất',     cls: 'bg-gray-100 text-gray-600' },
   CANCELLED:   { label: 'Đã hủy',       cls: 'bg-red-100 text-red-700' },
-  NO_SHOW:     { label: 'Vắng mặt',     cls: 'bg-orange-100 text-orange-700' },
 };
 
 const TABS = [
@@ -37,9 +39,9 @@ export default function AppointmentHistoryPage() {
       a.patientName?.toLowerCase().includes(search.toLowerCase()) ||
       a.symptoms?.toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
-    if (tab === 'active') return ['PENDING', 'ARRIVED', 'IN_PROGRESS'].includes(a.status);
+    if (tab === 'active') return ['PENDING', 'CONFIRMED', 'CHECK_IN', 'IN_PROGRESS'].includes(a.status);
     if (tab === 'completed') return a.status === 'COMPLETED';
-    if (tab === 'cancelled') return ['CANCELLED', 'NO_SHOW'].includes(a.status);
+    if (tab === 'cancelled') return a.status === 'CANCELLED';
     return true;
   });
 
@@ -162,13 +164,14 @@ export default function AppointmentHistoryPage() {
                 {getStatus(selected.status).label}
               </span>
               <div className="flex flex-col gap-2 pt-1">
-                {['ARRIVED', 'IN_PROGRESS'].includes(selected.status) && (
+                {/* Doctor chỉ có thể bắt đầu khám khi CHECK_IN */}
+                {selected.status === 'CHECK_IN' && (
                   <button type="button" disabled={updating} onClick={() => handleStatus('IN_PROGRESS')}
                     className="w-full bg-blue-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60">
                     Bắt đầu khám
                   </button>
                 )}
-                {['IN_PROGRESS', 'ARRIVED'].includes(selected.status) && (
+                {selected.status === 'IN_PROGRESS' && (
                   <button type="button" disabled={updating} onClick={() => handleStatus('COMPLETED')}
                     className="w-full bg-green-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-60">
                     Hoàn tất khám

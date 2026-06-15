@@ -9,6 +9,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getUnreadCount, getMyNotifications, markNotificationRead } from '../../api/notifications';
 
 /* ── Nav theo role ── */
 const NAV = {
@@ -70,15 +71,48 @@ export default function AppSidebar({ children }) {
   const [collapsed,   setCollapsed]   = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [dropOpen,    setDropOpen]    = useState(false);  // dropdown avatar
-  const dropRef = useRef(null);
+  const [notifOpen,   setNotifOpen]   = useState(false);  // dropdown thông báo
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifs,      setNotifs]      = useState([]);
+  const dropRef  = useRef(null);
+  const notifRef = useRef(null);
 
   const nav   = NAV[user.role]   || NAV.user;
   const style = ROLE_STYLE[user.role] || ROLE_STYLE.user;
+
+  // Load unread count khi mount
+  useEffect(() => {
+    getUnreadCount()
+      .then(res => setUnreadCount(typeof res === 'number' ? res : res?.count ?? 0))
+      .catch(() => setUnreadCount(0));
+  }, []);
+
+  // Load notifications khi mở panel
+  const handleOpenNotif = async () => {
+    const next = !notifOpen;
+    setNotifOpen(next);
+    setDropOpen(false);
+    if (next && notifs.length === 0) {
+      try {
+        const res = await getMyNotifications();
+        setNotifs(Array.isArray(res) ? res : []);
+      } catch { setNotifs([]); }
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await markNotificationRead(id);
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch { /* ignore */ }
+  };
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     const handler = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -212,8 +246,11 @@ export default function AppSidebar({ children }) {
                 className="flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
               >
                 {/* Avatar */}
-                <div className={`w-8 h-8 ${style.bg} rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-                  {user.name?.charAt(0) || '?'}
+                <div className={`w-8 h-8 ${style.bg} rounded-full overflow-hidden flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                  {user.avatarUrl
+                    ? <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" onError={e => { e.target.style.display='none'; e.target.parentNode.textContent = user.name?.charAt(0) || '?'; }} />
+                    : (user.name?.charAt(0) || '?')
+                  }
                 </div>
                 {/* Tên + badge — ẩn trên mobile nhỏ */}
                 <div className="hidden sm:block text-left">
