@@ -155,7 +155,8 @@ export default function BookForPatientPage() {
       </div>
       <h2 className="text-xl font-extrabold text-gray-800 mb-2">Đặt lịch thành công!</h2>
       <p className="text-sm text-gray-500 mb-2">
-        Bệnh nhân <strong>{patient?.patientName}</strong> đã được đặt lịch khám.
+        Lịch đã được tạo với trạng thái <strong className="text-blue-600">CONFIRMED</strong>.
+        Khi bệnh nhân đến, staff bấm <strong>Check-in</strong> để chuyển sang CHECK_IN.
       </p>
       <div className="bg-blue-50 rounded-2xl p-4 text-left text-xs space-y-1.5 mb-6">
         <p><span className="text-gray-400">Bác sĩ:</span> <strong>{selectedDoctor?.name}</strong></p>

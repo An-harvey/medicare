@@ -4,30 +4,19 @@
  * Role : STAFF
  * BE enum: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
  *
- * Luồng:
- *   PENDING → (Check-in) → CHECK_IN → (Gọi vào) → IN_PROGRESS → COMPLETED
+ * Luồng staff (lo_trinh.txt §10):
+ *   Lần 1: PENDING  → CONFIRMED  (Xác nhận)
+ *   Lần 2: CONFIRMED → CHECK_IN  (Check-in)
+ * Bác sĩ: CHECK_IN → IN_PROGRESS → COMPLETED
  */
 import { useState } from 'react';
 import { useStaffAppointments } from '../../hooks/useAppointments';
-import { staffCancelAppointment } from '../../api/staff';
-
-function formatTime(t) {
-  if (!t) return '---';
-  if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
-  return String(t).substring(0, 5);
-}
-
-// ── Map BE status → label + style + action ──
-// STAFF chỉ làm PENDING/CONFIRMED → CHECK_IN
-// BÁC SĨ làm CHECK_IN → IN_PROGRESS (không phải staff)
-const STATUS = {
-  PENDING:     { label:'Chờ xác nhận', cls:'bg-yellow-100 text-yellow-700', dot:'bg-yellow-500', action:'Check-in',  nextStatus:'CHECK_IN' },
-  CONFIRMED:   { label:'Đã xác nhận',  cls:'bg-blue-100 text-blue-700',    dot:'bg-blue-500',   action:'Check-in',  nextStatus:'CHECK_IN' },
-  CHECK_IN:    { label:'✅ Đã check-in',cls:'bg-cyan-100 text-cyan-700',    dot:'bg-cyan-500',   action:null,        nextStatus:null },
-  IN_PROGRESS: { label:'⚕️ Đang khám', cls:'bg-green-100 text-green-700',  dot:'bg-green-500',  action:null,        nextStatus:null },
-  COMPLETED:   { label:'Đã khám',      cls:'bg-gray-100 text-gray-400',    dot:'bg-gray-300',   action:null,        nextStatus:null },
-  CANCELLED:   { label:'Đã hủy',       cls:'bg-red-100 text-red-500',      dot:'bg-red-400',    action:null,        nextStatus:null },
-};
+import {
+  getStaffStatusMeta,
+  staffActionToast,
+  canStaffCancel,
+} from '../../utils/staffAppointment';
+import { formatTime } from '../../utils/formatters';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -59,7 +48,7 @@ export default function CheckInPage() {
       await updateStatus(appt.appointmentId, nextStatus);
       setSelected(prev => prev?.appointmentId === appt.appointmentId
         ? { ...prev, status: nextStatus } : prev);
-      showToast(nextStatus === 'CHECK_IN' ? '✅ Check-in thành công!' : 'Đã cập nhật trạng thái.');
+      showToast(staffActionToast(nextStatus));
     } catch (e) {
       showToast('Lỗi: ' + (e?.message || 'Không thể cập nhật trạng thái'));
     } finally { setActionLoading(null); }
@@ -70,7 +59,7 @@ export default function CheckInPage() {
     if (!selected) return;
     setCancelling(true);
     try {
-      await staffCancelAppointment(selected.appointmentId, cancelReason.trim() || 'Lễ tân hủy lịch');
+      await updateStatus(selected.appointmentId, 'CANCELLED');
       setCancelModal(false);
       setCancelReason('');
       setSelected(null);
@@ -81,13 +70,13 @@ export default function CheckInPage() {
     } finally { setCancelling(false); }
   };
 
-  const getStatus = (s) => STATUS[s] || { label: s, cls:'bg-gray-100 text-gray-500', dot:'bg-gray-400', action:null };
+  const getStatus = getStaffStatusMeta;
 
   const stats = [
-    { label:'Tổng',        value: queue.length,                                                    color:'text-gray-700',  bg:'bg-gray-100' },
-    { label:'Đã check-in', value: queue.filter(p => ['CHECK_IN','IN_PROGRESS','COMPLETED'].includes(p.status)).length, color:'text-cyan-700',   bg:'bg-cyan-50' },
-    { label:'Đang khám',   value: queue.filter(p => p.status === 'IN_PROGRESS').length,            color:'text-green-700', bg:'bg-green-50' },
-    { label:'Chờ đến',     value: queue.filter(p => ['PENDING','CONFIRMED'].includes(p.status)).length, color:'text-yellow-700', bg:'bg-yellow-50' },
+    { icon: '⏳', label: 'Chờ xác nhận', value: queue.filter(p => p.status === 'PENDING').length, color: 'text-yellow-700', bg: 'bg-yellow-50' },
+    { icon: '📋', label: 'Đã xác nhận',  value: queue.filter(p => p.status === 'CONFIRMED').length, color: 'text-blue-700', bg: 'bg-blue-50' },
+    { icon: '✅', label: 'Đã check-in',  value: queue.filter(p => ['CHECK_IN','IN_PROGRESS','COMPLETED'].includes(p.status)).length, color: 'text-cyan-700', bg: 'bg-cyan-50' },
+    { icon: '📊', label: 'Tổng',         value: queue.length, color: 'text-gray-700', bg: 'bg-gray-100' },
   ];
 
   return (
@@ -102,7 +91,9 @@ export default function CheckInPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-800">Check-in bệnh nhân</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{TODAY}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {TODAY} · Bước 1: <strong className="text-blue-600">Xác nhận</strong> → Bước 2: <strong className="text-purple-600">Check-in</strong>
+          </p>
         </div>
       </div>
 
@@ -177,9 +168,7 @@ export default function CheckInPage() {
                     {st.action && (
                       <button disabled={isActioning}
                         onClick={e => { e.stopPropagation(); handleAction(appt, st.nextStatus); }}
-                        className={`shrink-0 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-60
-                          ${st.nextStatus === 'CHECK_IN'    ? 'bg-purple-600 text-white hover:bg-purple-700' :
-                            st.nextStatus === 'IN_PROGRESS' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}`}>
+                        className={`shrink-0 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${st.actionCls || 'bg-purple-600 text-white'}`}>
                         {isActioning ? '...' : st.action}
                       </button>
                     )}
@@ -193,7 +182,7 @@ export default function CheckInPage() {
         {/* Chi tiết */}
         {selected ? (() => {
           const st = getStatus(selected.status);
-          const canCancel = ['PENDING','CONFIRMED'].includes(selected.status);
+          const canCancel = canStaffCancel(selected.status);
           return (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4 sticky top-6">
               <div className="flex items-center justify-between">
@@ -223,7 +212,7 @@ export default function CheckInPage() {
               {st.action && (
                 <button disabled={actionLoading === selected.appointmentId}
                   onClick={() => handleAction(selected, st.nextStatus)}
-                  className="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-purple-700 disabled:opacity-60">
+                  className={`w-full text-xs font-bold py-2.5 rounded-xl disabled:opacity-60 ${st.actionCls || 'bg-purple-600 text-white hover:bg-purple-700'}`}>
                   {actionLoading === selected.appointmentId ? 'Đang xử lý...' : st.action}
                 </button>
               )}

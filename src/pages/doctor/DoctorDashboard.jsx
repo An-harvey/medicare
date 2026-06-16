@@ -82,7 +82,7 @@ export default function DoctorDashboard() {
   };
 
   const statCards = [
-    { icon: '👥', label: 'Cần khám hôm nay',   value: upcoming.filter(a => ['CHECK_IN','IN_PROGRESS'].length).length || upcoming.length, color: 'text-blue-600',   bg: 'bg-blue-50' },
+    { icon: '👥', label: 'Cần khám', value: displayList.filter(a => ['CHECK_IN', 'IN_PROGRESS'].includes(a.status)).length || displayList.length, color: 'text-blue-600', bg: 'bg-blue-50' },
     { icon: '✅', label: 'Đã khám tuần này',    value: stats?.totalExaminedThisWeek  ?? '—', color: 'text-green-600',  bg: 'bg-green-50' },
     { icon: '⏳', label: 'Đang chờ check-in',   value: stats?.totalPendingAppointments ?? '—', color: 'text-yellow-600', bg: 'bg-yellow-50' },
     { icon: '📋', label: 'Đã khám tháng này',  value: stats?.totalExaminedThisMonth ?? '—', color: 'text-purple-600', bg: 'bg-purple-50' },

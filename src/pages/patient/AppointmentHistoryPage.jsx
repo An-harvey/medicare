@@ -8,7 +8,7 @@
  * AppointmentResponseDTO:
  *   { appointmentId, patientName, doctorName, workDate, startTime, symptoms, status, cancelReason }
  *
- * AppointmentStatus: PENDING | ARRIVED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW
+ * AppointmentStatus: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
