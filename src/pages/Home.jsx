@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom';
-import { articles, stats, testimonials } from '../data/mockData';
 import DoctorCard from '../components/DoctorCard';
 import ArticleCard from '../components/ArticleCard';
+import { articles, testimonials } from '../data/mockData';
 import { useSpecialties } from '../hooks/useCatalog';
 import { useDoctors } from '../hooks/useDoctors';
+
+// Số liệu thống kê tĩnh — cập nhật từ marketing/thực tế
+const STATS = [
+  { value: '50+',   label: 'Bác sĩ chuyên khoa' },
+  { value: '30K+',  label: 'Lượt khám thành công' },
+  { value: '15+',   label: 'Năm kinh nghiệm' },
+  { value: '98%',   label: 'Bệnh nhân hài lòng' },
+];
 
 /* ── Ảnh dùng trong trang ── */
 const IMGS = {
@@ -143,7 +151,7 @@ function BookingBar({ specialties = [], doctors = [] }) {
 function StatsSection() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-      {stats.map((s) => (
+      {STATS.map((s) => (
         <div key={s.label} className="text-center">
           <div className="text-4xl font-extrabold text-blue-600">{s.value}</div>
           <div className="text-sm text-gray-500 mt-1 font-medium">{s.label}</div>

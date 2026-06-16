@@ -65,10 +65,16 @@ export function useMyAppointments() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  // Hủy lịch → PUT /api/patient/appointments/{id}/cancel?reason=
+  // Refetch khi user quay lại tab (sau khi bác sĩ cập nhật trạng thái)
+  useEffect(() => {
+    const onFocus = () => fetch();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetch]);
+
   const cancel = async (id, reason) => {
     await patientCancelAppointment(id, reason);
-    await fetch(); // refresh
+    await fetch();
   };
 
   return { data, loading, error, refetch: fetch, cancel };

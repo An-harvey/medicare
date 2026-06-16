@@ -70,42 +70,70 @@ export default function AppSidebar({ children }) {
 
   const [collapsed,   setCollapsed]   = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
-  const [dropOpen,    setDropOpen]    = useState(false);  // dropdown avatar
-  const [notifOpen,   setNotifOpen]   = useState(false);  // dropdown thông báo
+  const [dropOpen,    setDropOpen]    = useState(false);
+  const [notifOpen,   setNotifOpen]   = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifs,      setNotifs]      = useState([]);
+  const [loadingNotif,setLoadingNotif]= useState(false);
   const dropRef  = useRef(null);
   const notifRef = useRef(null);
 
   const nav   = NAV[user.role]   || NAV.user;
   const style = ROLE_STYLE[user.role] || ROLE_STYLE.user;
 
-  // Load unread count khi mount
+  // ── Polling unread count mỗi 30s ──
   useEffect(() => {
-    getUnreadCount()
-      .then(res => setUnreadCount(typeof res === 'number' ? res : res?.count ?? 0))
-      .catch(() => setUnreadCount(0));
+    const loadCount = () => {
+      getUnreadCount()
+        .then(res => setUnreadCount(typeof res === 'number' ? res : Number(res) || 0))
+        .catch(() => {});
+    };
+    loadCount();
+    const timer = setInterval(loadCount, 30000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Load notifications khi mở panel
+  // ── Mở notification panel → load danh sách ──
   const handleOpenNotif = async () => {
     const next = !notifOpen;
     setNotifOpen(next);
     setDropOpen(false);
-    if (next && notifs.length === 0) {
+    if (next) {
+      setLoadingNotif(true);
       try {
         const res = await getMyNotifications();
         setNotifs(Array.isArray(res) ? res : []);
       } catch { setNotifs([]); }
+      finally { setLoadingNotif(false); }
     }
   };
 
-  const handleMarkRead = async (id) => {
-    try {
-      await markNotificationRead(id);
-      setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch { /* ignore */ }
+  // ── Click notification → mark read + navigate ──
+  const handleNotifClick = async (n) => {
+    if (!n.isRead) {
+      try {
+        await markNotificationRead(n.id);
+        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch {}
+    }
+    if (n.link) {
+      navigate(n.link);
+      setNotifOpen(false);
+    }
+  };
+
+  // ── Format thời gian tương đối ──
+  const timeAgo = (iso) => {
+    if (!iso) return '';
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'Vừa xong';
+    if (m < 60) return `${m} phút trước`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} giờ trước`;
+    const d = Math.floor(h / 24);
+    return `${d} ngày trước`;
   };
 
   // Đóng dropdown khi click ra ngoài
@@ -233,12 +261,59 @@ export default function AppSidebar({ children }) {
           {/* Right: notification + user avatar dropdown */}
           <div className="flex items-center gap-2">
 
-            {/* Notification bell */}
-            <button className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
-              <span className="text-lg">🔔</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+            {/* ── Notification Bell ── */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={handleOpenNotif}
+                className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <span className="text-lg">🔔</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <p className="font-bold text-gray-800 text-sm">Thông báo</p>
+                    {unreadCount > 0 && (
+                      <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full">
+                        {unreadCount} chưa đọc
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {loadingNotif ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : notifs.length === 0 ? (
+                      <div className="py-10 text-center text-gray-400">
+                        <div className="text-3xl mb-2">🔔</div>
+                        <p className="text-xs">Chưa có thông báo nào</p>
+                      </div>
+                    ) : notifs.map(n => (
+                      <button key={n.id} onClick={() => handleNotifClick(n)}
+                        className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-blue-50/60' : ''}`}>
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${!n.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs leading-relaxed ${!n.isRead ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
+                              {n.message}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                          </div>
+                          {n.link && <span className="text-gray-300 text-xs shrink-0">›</span>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             {/* ── User avatar + dropdown ── */}
             <div className="relative" ref={dropRef}>
               <button
