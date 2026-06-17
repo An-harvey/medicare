@@ -107,22 +107,20 @@ export default function AppSidebar({ children }) {
     }
   };
 
-  // ── Click notification → mark read + re-sync count từ API + navigate ──
+  // ── Click notification → chỉ mark read, KHÔNG tự navigate ──
+  // User tự quyết định xem trang hay không
   const handleNotifClick = async (n) => {
     if (!n.isRead) {
       try {
         await markNotificationRead(n.id);
         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x));
-        // Re-sync count từ API thay vì decrement local (tránh lệch)
+        // Re-sync count từ API
         getUnreadCount()
           .then(res => setUnreadCount(typeof res === 'number' ? res : Number(res) || 0))
           .catch(() => setUnreadCount(prev => Math.max(0, prev - 1)));
       } catch {}
     }
-    if (n.link) {
-      navigate(n.link);
-      setNotifOpen(false);
-    }
+    // Không tự navigate — user bấm link riêng nếu muốn
   };
 
   // ── Đánh dấu tất cả đã đọc ──
@@ -335,8 +333,10 @@ export default function AppSidebar({ children }) {
                       </div>
                     ) : notifs.map(n => (
                       <button key={n.id} onClick={() => handleNotifClick(n)}
-                        className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-blue-50/60' : ''}`}>
+                        className={`w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 transition-colors
+                          ${!n.isRead ? 'bg-blue-50/60 hover:bg-blue-50' : 'hover:bg-gray-50'}`}>
                         <div className="flex items-start gap-2.5">
+                          {/* Dot chưa đọc */}
                           <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${!n.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
                           <div className="flex-1 min-w-0">
                             <p className={`text-xs leading-relaxed ${!n.isRead ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
@@ -344,7 +344,6 @@ export default function AppSidebar({ children }) {
                             </p>
                             <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
                           </div>
-                          {n.link && <span className="text-gray-300 text-xs shrink-0">›</span>}
                         </div>
                       </button>
                     ))}
