@@ -29,8 +29,7 @@ export const patientGetProfile = () =>
   api.get('/patient/profile');
 
 export const patientUpdateProfile = (dto, avatarFile) => {
-  // BE nhận multipart/form-data: field "data" là JSON string + "avatarFile" optional
-  // KHÔNG set Content-Type thủ công — để axios/browser tự set với boundary đúng
+  // ⚠️ lo_trinh.txt §3: method là PUT (không phải POST)
   const form = new FormData();
   form.append('data', JSON.stringify({
     dob:                    dto.dob                    || null,
@@ -41,7 +40,7 @@ export const patientUpdateProfile = (dto, avatarFile) => {
     imageUrl:               dto.imageUrl               || null,
   }));
   if (avatarFile) form.append('avatarFile', avatarFile);
-  return api.post('/patient/profile', form);
+  return api.put('/patient/profile', form);
 };
 
 /* ── Appointments ── */

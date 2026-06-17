@@ -41,8 +41,7 @@ const NAV = {
   ],
   staff: [
     { to: '/dashboard',              icon: '🏠', label: 'Tổng quan' },
-    { to: '/dashboard/checkin',      icon: '✅', label: 'Check-in' },
-    { to: '/dashboard/queue',        icon: '🔢', label: 'Hàng chờ' },
+    { to: '/dashboard/checkin',      icon: '✅', label: 'Quản lý lịch hẹn' },
     { to: '/dashboard/book-patient', icon: '📅', label: 'Đặt lịch nhanh' },
     { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt' },
   ],

@@ -39,6 +39,7 @@ import {
   doctorUpdateAppointmentStatus,
 } from '../api/doctor';import {
   staffSearchAppointments,
+  staffGetPendingAppointments,
   staffUpdateAppointmentStatus,
 } from '../api/staff';
 import { todayISO } from '../utils/formatters';
@@ -226,4 +227,40 @@ export function useStaffAppointments(params = {}) {
   };
 
   return { data, loading, error, refetch: fetch, updateStatus };
+}
+
+/* ════════════ STAFF: lịch hẹn chờ xác nhận (PENDING) ══ */
+/**
+ * useStaffPendingAppointments
+ * GET /api/staff/appointments/pending → AppointmentResponseDTO[]
+ * Toàn bộ PENDING trên hệ thống, sắp theo ngày khám tăng dần
+ * Dùng cho StaffDashboard: hiển thị ngay khi vào ca mà không cần nhập CCCD/ngày
+ */
+export function useStaffPendingAppointments() {
+  const [data,    setData]    = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await staffGetPendingAppointments();
+      setData(Array.isArray(res) ? res : []);
+    } catch (e) {
+      setError(e?.message || 'Lỗi tải danh sách chờ xác nhận');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const confirmAppointment = async (id) => {
+    await staffUpdateAppointmentStatus(id, 'CONFIRMED');
+    await fetch();
+  };
+
+  return { data, loading, error, refetch: fetch, confirmAppointment };
 }

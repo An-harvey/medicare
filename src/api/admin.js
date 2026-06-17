@@ -103,13 +103,14 @@ export const adminCreateUser = (data) =>
     specialtyId: data.specialtyId ?? null,
   });
 
-// PUT toggle active/inactive
+// ⚠️ lo_trinh.txt §6.4: method là PATCH (không phải PUT)
 export const adminToggleUserStatus = (id, isActive) =>
-  api.put(`/admin/users/${id}/status`, null, { params: { isActive } });
+  api.patch(`/admin/users/${id}/status`, null, { params: { isActive } });
 
 /* ════════════════════ BÁC SĨ (học hàm) ═══════════════ */
+// ⚠️ lo_trinh.txt §6.4: method là PATCH (không phải PUT)
 export const adminUpdateDoctorAcademic = (id, data) =>
-  api.put(`/admin/doctors/${id}/academic-info`, {
+  api.patch(`/admin/doctors/${id}/academic-info`, {
     academicTitle:   data.academicTitle,
     degree:          data.degree,
     experienceYears: data.experienceYears,
@@ -147,13 +148,12 @@ export const adminCreateSchedule = (data) =>
     maxPatients: data.maxPatients,
   });
 
+// ⚠️ lo_trinh.txt §6.6: PATCH chỉ nhận maxPatients
 export const adminUpdateSchedule = (id, data) =>
   api.patch(`/admin/schedules/${id}`, {
     maxPatients: data.maxPatients,
-    status:      data.status,
   });
 
-// Khi BE bổ sung: DELETE /admin/schedules/{id}
 export const adminDeleteSchedule = (id) =>
   api.delete(`/admin/schedules/${id}`);
 

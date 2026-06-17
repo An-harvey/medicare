@@ -17,6 +17,7 @@
 import { useState, useEffect } from 'react';
 import { getSpecialties } from '../api/public';
 import { adminGetDiseases, adminGetMedicines, adminGetTimeSlots } from '../api/admin';
+import { doctorGetDiseases, doctorGetMedicines } from '../api/doctor';
 import api from '../api/config';
 
 /* ── Thử nhiều endpoint theo thứ tự ưu tiên ── */
@@ -74,9 +75,9 @@ const diseaseTransform = d => ({ id: d.id, code: d.code, name: d.name, descripti
 export const useDiseases = () =>
   useFetchList(() =>
     tryEndpoints([
-      // 1. Doctor endpoint (khi BE bổ sung)
-      { fn: () => api.get('/doctor/diseases', { params: { page: 0, size: 500 } }), transform: diseaseTransform },
-      // 2. Public endpoint (khi BE bổ sung)
+      // 1. Doctor endpoint (lo_trinh.txt §4 — đã có từ BE)
+      { fn: () => doctorGetDiseases({ page: 0, size: 500 }), transform: diseaseTransform },
+      // 2. Public endpoint (nếu BE mở thêm)
       { fn: () => api.get('/public/diseases', { params: { page: 0, size: 500 } }), transform: diseaseTransform },
       // 3. Admin endpoint (fallback — chỉ admin token mới dùng được)
       { fn: () => adminGetDiseases({ page: 0, size: 500 }), transform: diseaseTransform },
@@ -94,9 +95,9 @@ const medicineTransform = m => ({
 export const useMedicines = () =>
   useFetchList(() =>
     tryEndpoints([
-      // 1. Doctor endpoint (khi BE bổ sung)
-      { fn: () => api.get('/doctor/medicines', { params: { page: 0, size: 1000 } }), transform: medicineTransform },
-      // 2. Public endpoint (khi BE bổ sung)
+      // 1. Doctor endpoint (lo_trinh.txt §4 — đã có từ BE)
+      { fn: () => doctorGetMedicines({ page: 0, size: 1000 }), transform: medicineTransform },
+      // 2. Public endpoint (nếu BE mở thêm)
       { fn: () => api.get('/public/medicines', { params: { page: 0, size: 1000 } }), transform: medicineTransform },
       // 3. Admin endpoint (fallback)
       { fn: () => adminGetMedicines({ page: 0, size: 1000 }), transform: medicineTransform },

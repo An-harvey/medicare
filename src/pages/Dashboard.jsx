@@ -92,8 +92,8 @@ export default function Dashboard() {
         <Route path="settings"    element={<SettingsPage />} />
 
         {/* ══════════ STAFF routes ══════════ */}
+        {/* checkin = quản lý lịch hẹn: xác nhận + check-in + tra cứu CCCD */}
         <Route path="checkin"        element={<AppointmentSearchPage />} />
-        <Route path="queue"          element={<AppointmentSearchPage />} />
         <Route path="book-patient"   element={<BookForPatientPage />} />
 
         {/* ══════════ Shared routes ══════════ */}

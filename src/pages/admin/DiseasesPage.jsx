@@ -11,10 +11,7 @@
  *        Body: { code, name, description }
  */
 import { useState, useCallback, useEffect } from 'react';
-import { adminGetDiseases, adminCreateDisease, adminUpdateDisease } from '../../api/admin';
-
-// BE chưa có DELETE — thêm khi BE hỗ trợ
-// import { adminDeleteDisease } from '../../api/admin';
+import { adminGetDiseases, adminCreateDisease, adminUpdateDisease, adminDeleteDisease } from '../../api/admin';
 
 export default function DiseasesPage() {
   const [diseases,  setDiseases]  = useState([]);
@@ -43,8 +40,10 @@ export default function DiseasesPage() {
     if (!window.confirm(`Xóa bệnh lý "${d.name}"?`)) return;
     setDeleting(d.id);
     try {
-      // await adminDeleteDisease(d.id); // Khi BE bổ sung
-      alert('BE chưa hỗ trợ DELETE /admin/diseases/{id}. Vui lòng liên hệ backend team.');
+      await adminDeleteDisease(d.id);
+      fetchList();
+    } catch (err) {
+      alert(err.message || 'Không thể xóa bệnh lý này.');
     } finally { setDeleting(null); }
   };
 

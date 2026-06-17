@@ -20,18 +20,12 @@ import api from './config';
 /* ── Hồ sơ bác sĩ — multipart/form-data ── */
 export const doctorUpdateProfile = (dto, avatarFile) => {
   const form = new FormData();
-  const jsonBlob = new Blob([JSON.stringify({
-        imageUrl: dto.imageUrl ?? null,
-        expertiseDescription: dto.expertiseDescription ?? null, 
-        biography: dto.biography ?? null,
-    })], { type: 'application/json' });
-
-    form.append('dto', jsonBlob);
-  // form.append('dto', JSON.stringify({
-  //   imageUrl:             dto.imageUrl             ?? null,
-  //   expertiseDescription: dto.expertiseDescription ?? null,
-  //   biography:            dto.biography            ?? null,
-  // }));
+  // ⚠️ field tên là "dto" (khác Patient dùng "data")
+  form.append('dto', JSON.stringify({
+    imageUrl:             dto.imageUrl             ?? null,
+    expertiseDescription: dto.expertiseDescription ?? null,
+    biography:            dto.biography            ?? null,
+  }));
   if (avatarFile) form.append('avatarFile', avatarFile);
   return api.put('/doctor/profile', form);
 };
@@ -71,9 +65,23 @@ export const doctorCreateMedicalRecord = (data) =>
       : null,
   });
 
-/* ── Thống kê hiệu suất ── */
+/* ── Thống kê hiệu suất — BE có thể trả null ── */
 export const doctorGetStatistics = () =>
   api.get('/doctor/statistics');
+
+/**
+ * Danh mục bệnh lý để kê bệnh án (lo_trinh.txt §4)
+ * GET /doctor/diseases?keyword=&page=0&size=10
+ */
+export const doctorGetDiseases = (params = {}) =>
+  api.get('/doctor/diseases', { params });
+
+/**
+ * Danh mục thuốc để kê đơn (lo_trinh.txt §4)
+ * GET /doctor/medicines?keyword=&page=0&size=10
+ */
+export const doctorGetMedicines = (params = {}) =>
+  api.get('/doctor/medicines', { params });
 
 /* ── Cập nhật trạng thái lịch hẹn (doctor) ── */
 export const doctorUpdateAppointmentStatus = (id, status) =>

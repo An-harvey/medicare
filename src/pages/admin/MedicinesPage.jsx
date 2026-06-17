@@ -10,7 +10,7 @@
  *
  * MedicineResponseDTO: { id, name, unit, usageInstructions }
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { adminGetMedicines, adminCreateMedicine, adminUpdateMedicine, adminDeleteMedicine } from '../../api/admin';
 
 const UNITS = ['Viên', 'Gói', 'Ống', 'Chai', 'Tuýp', 'Lọ', 'mg', 'ml'];
@@ -35,7 +35,7 @@ export default function MedicinesPage() {
     finally { setLoading(false); }
   }, [keyword, page]);
 
-  useState(() => { fetchList(); }, []);
+  useEffect(() => { fetchList(); }, [fetchList]);
 
   const handleSearch = e => { e.preventDefault(); setPage(0); fetchList(keyword, 0); };
 
