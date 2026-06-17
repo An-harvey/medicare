@@ -29,7 +29,7 @@ export const patientGetProfile = () =>
   api.get('/patient/profile');
 
 export const patientUpdateProfile = (dto, avatarFile) => {
-  // ⚠️ lo_trinh.txt §3: method là PUT (không phải POST)
+  // put ko fai post
   const form = new FormData();
   form.append('data', JSON.stringify({
     dob:                    dto.dob                    || null,

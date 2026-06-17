@@ -78,13 +78,22 @@ export default function ProfilePage() {
     setError('');
     try {
       if (isPatient) {
-        // ── PATIENT: update profile ──
+        // ── PATIENT: update profile — PUT /patient/profile (multipart) ──
         const res = await updatePatientProfile(patient, avatarFile);
-        if (res.imageUrl) updateLocalUser({ avatarUrl: getImageUrl(res.imageUrl) });
+        // res.imageUrl có thể là tên file hoặc full URL → getImageUrl xử lý cả hai
+        if (res?.imageUrl) {
+          const newAvatarUrl = getImageUrl(res.imageUrl);
+          updateLocalUser({ avatarUrl: newAvatarUrl });
+          setAvatarPreview(newAvatarUrl);
+        }
       } else if (isDoctor) {
-        // ── DOCTOR: update profile (chỉ expertiseDescription, biography, imageUrl) ──
-        const res = await updateDoctorProfile({ ...doctor, imageUrl: user?.avatarUrl }, avatarFile);
-        if (res.imageUrl) updateLocalUser({ avatarUrl: getImageUrl(res.imageUrl) });
+        // ── DOCTOR: update profile — PUT /doctor/profile (multipart) ──
+        const res = await updateDoctorProfile({ ...doctor, imageUrl: null }, avatarFile);
+        if (res?.imageUrl) {
+          const newAvatarUrl = getImageUrl(res.imageUrl);
+          updateLocalUser({ avatarUrl: newAvatarUrl });
+          setAvatarPreview(newAvatarUrl);
+        }
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

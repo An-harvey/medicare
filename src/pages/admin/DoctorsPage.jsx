@@ -217,7 +217,7 @@ export default function DoctorsPage() {
     price:    d.price   || 0,
     patients: d.patients || 0,
     status:   d.status  || (d.isActive !== false ? 'active' : 'off'),
-    img:      d.img     || d.imageUrl || d.avatar || '',
+    img:      d.avatar  || d.img      || d.imageUrl || '',
     // Giữ raw để dùng khi edit academic
     _raw: d,
   }));

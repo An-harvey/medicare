@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUnreadCount, getMyNotifications, markNotificationRead } from '../../api/notifications';
+import { getUnreadCount, getMyNotifications, markNotificationRead, markAllRead } from '../../api/notifications';
 
 /* ── Nav theo role ── */
 const NAV = {
@@ -17,14 +17,14 @@ const NAV = {
     { to: '/dashboard',              icon: '🏠', label: 'Tổng quan' },
     { to: '/dashboard/bookings',     icon: '📅', label: 'Lịch hẹn của tôi' },
     { to: '/dashboard/records',      icon: '📋', label: 'Hồ sơ sức khỏe' },
-    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt' },
+    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt', disabled: true },
   ],
   doctor: [
     { to: '/dashboard',              icon: '🏠', label: 'Tổng quan' },
     { to: '/dashboard/schedule',     icon: '📅', label: 'Lịch khám' },
     { to: '/dashboard/patients',     icon: '👥', label: 'Bệnh nhân' },
     { to: '/dashboard/prescription', icon: '💊', label: 'Kê đơn thuốc' },
-    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt' },
+    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt', disabled: true },
   ],
   admin: [
     { to: '/dashboard',            icon: '🏠', label: 'Tổng quan' },
@@ -37,13 +37,13 @@ const NAV = {
     { to: '/dashboard/schedules',  icon: '📅', label: 'Lịch làm việc' },
     { to: '/dashboard/payments',   icon: '💰', label: 'Thanh toán' },
     { to: '/dashboard/reports',    icon: '📊', label: 'Báo cáo' },
-    { to: '/dashboard/settings',   icon: '⚙️', label: 'Cài đặt' },
+    { to: '/dashboard/settings',   icon: '⚙️', label: 'Cài đặt', disabled: true },
   ],
   staff: [
     { to: '/dashboard',              icon: '🏠', label: 'Tổng quan' },
     { to: '/dashboard/checkin',      icon: '✅', label: 'Quản lý lịch hẹn' },
     { to: '/dashboard/book-patient', icon: '📅', label: 'Đặt lịch nhanh' },
-    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt' },
+    { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt', disabled: true },
   ],
 };
 
@@ -107,19 +107,31 @@ export default function AppSidebar({ children }) {
     }
   };
 
-  // ── Click notification → mark read + navigate ──
+  // ── Click notification → mark read + re-sync count từ API + navigate ──
   const handleNotifClick = async (n) => {
     if (!n.isRead) {
       try {
         await markNotificationRead(n.id);
         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, isRead: true } : x));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        // Re-sync count từ API thay vì decrement local (tránh lệch)
+        getUnreadCount()
+          .then(res => setUnreadCount(typeof res === 'number' ? res : Number(res) || 0))
+          .catch(() => setUnreadCount(prev => Math.max(0, prev - 1)));
       } catch {}
     }
     if (n.link) {
       navigate(n.link);
       setNotifOpen(false);
     }
+  };
+
+  // ── Đánh dấu tất cả đã đọc ──
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead(notifs);
+      setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {}
   };
 
   // ── Format thời gian tương đối ──
@@ -175,22 +187,39 @@ export default function AppSidebar({ children }) {
       {/* ── Nav links ── */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {nav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/dashboard'}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-              ${isActive
-                ? `${style.bg} text-white shadow-sm`
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'}
-              ${collapsed && !mobile ? 'justify-center' : ''}
-            `}
-            onClick={() => mobile && setMobileOpen(false)}
-          >
-            <span className="text-base shrink-0">{item.icon}</span>
-            {(!collapsed || mobile) && <span>{item.label}</span>}
-          </NavLink>
+          item.disabled ? (
+            /* Settings: "Sắp có" — không điều hướng */
+            <div key={item.to}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 cursor-not-allowed
+                ${collapsed && !mobile ? 'justify-center' : ''}`}
+              title="Chức năng sắp ra mắt"
+            >
+              <span className="text-base shrink-0">{item.icon}</span>
+              {(!collapsed || mobile) && (
+                <span className="flex-1 flex items-center justify-between">
+                  {item.label}
+                  <span className="text-[9px] bg-gray-100 text-gray-400 font-bold px-1.5 py-0.5 rounded-full ml-1">Sắp có</span>
+                </span>
+              )}
+            </div>
+          ) : (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/dashboard'}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${isActive
+                  ? `${style.bg} text-white shadow-sm`
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'}
+                ${collapsed && !mobile ? 'justify-center' : ''}
+              `}
+              onClick={() => mobile && setMobileOpen(false)}
+            >
+              <span className="text-base shrink-0">{item.icon}</span>
+              {(!collapsed || mobile) && <span>{item.label}</span>}
+            </NavLink>
+          )
         ))}
       </nav>
 
@@ -278,11 +307,21 @@ export default function AppSidebar({ children }) {
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                     <p className="font-bold text-gray-800 text-sm">Thông báo</p>
-                    {unreadCount > 0 && (
-                      <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full">
-                        {unreadCount} chưa đọc
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <>
+                          <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full">
+                            {unreadCount} chưa đọc
+                          </span>
+                          <button
+                            onClick={handleMarkAllRead}
+                            className="text-[10px] text-blue-600 hover:underline font-semibold"
+                          >
+                            Đọc tất cả
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
                     {loadingNotif ? (

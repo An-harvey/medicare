@@ -123,7 +123,13 @@ export function AuthProvider({ children }) {
 
   /* Cập nhật thông tin user local sau khi sửa profile */
   const updateLocalUser = (patch) =>
-    setUser(prev => prev ? { ...prev, ...patch } : prev);
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      // Lưu ngay vào localStorage để avatar persist sau reload
+      localStorage.setItem('mc_auth', JSON.stringify(updated));
+      return updated;
+    });
 
   const value = useMemo(
     () => ({ user, isAuthenticated: Boolean(user), loading, login, logout, register, updateLocalUser }),

@@ -123,8 +123,13 @@ export default function CheckInPage() {
       </form>
 
       {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-700">
-          ⚠️ {error}
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+          <span>❌</span>
+          <div>
+            <p className="font-semibold">Lỗi tải dữ liệu</p>
+            <p className="text-xs mt-0.5">{error}</p>
+            <p className="text-xs text-red-500 mt-0.5">Kiểm tra BE đang chạy và bạn đã đăng nhập đúng role STAFF</p>
+          </div>
         </div>
       )}
 
@@ -142,7 +147,10 @@ export default function CheckInPage() {
           ) : queue.length === 0 ? (
             <div className="py-12 text-center text-gray-400">
               <div className="text-4xl mb-2">📭</div>
-              <p className="text-sm">Không có lịch hẹn nào</p>
+              <p className="text-sm font-medium">Không có lịch hẹn nào</p>
+              <p className="text-xs mt-1">
+                {cccdSearch ? `Không tìm thấy lịch hẹn với CCCD "${cccdSearch}"` : `Hôm nay (${TODAY}) chưa có lịch hẹn`}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-50 max-h-[480px] overflow-y-auto">

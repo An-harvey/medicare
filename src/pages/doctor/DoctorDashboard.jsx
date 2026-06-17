@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useDoctorUpcoming, useDoctorStatistics } from '../../hooks/useAppointments';
 import { formatDate, formatTime } from '../../utils/formatters';
@@ -18,6 +18,7 @@ const STATUS_STYLE = {
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: upcoming, loading: loadingUpcoming, error: upcomingError, refetch } = useDoctorUpcoming();
   const { data: stats, loading: loadingStats } = useDoctorStatistics();
   const [selected,   setSelected]   = useState(null);
@@ -33,8 +34,7 @@ export default function DoctorDashboard() {
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 4000); };
 
   // Bác sĩ bắt đầu khám: CHECK_IN → IN_PROGRESS
-  // KHÔNG refetch vì /upcoming sẽ không trả IN_PROGRESS nữa → phiếu biến mất
-  // Chỉ cập nhật local state: đổi status → IN_PROGRESS, giữ trong list
+  // Sau khi thành công → tự động chuyển sang màn kê đơn / hồ sơ bệnh án
   const handleStartExam = async (appt) => {
     setUpdating(true);
     try {
@@ -46,10 +46,11 @@ export default function DoctorDashboard() {
           a.appointmentId === appt.appointmentId ? { ...a, status: 'IN_PROGRESS' } : a
         );
       });
-      // Cập nhật selected panel
       setSelected(prev => prev?.appointmentId === appt.appointmentId
         ? { ...prev, status: 'IN_PROGRESS' } : prev);
-      showToast(`⚕️ Đang khám: ${appt.patientName}`);
+      showToast(`⚕️ Bắt đầu khám: ${appt.patientName}`);
+      // Tự động chuyển sang màn kê đơn thuốc / tạo hồ sơ bệnh án
+      navigate('/dashboard/prescription', { state: { appointmentId: appt.appointmentId } });
     } catch (e) {
       const msg = e?.message || '';
       if (e?.status === 400 || msg.toLowerCase().includes('check')) {
