@@ -67,26 +67,24 @@ export function AuthProvider({ children }) {
       const res = await authLogin({ email, password });
       const userData = buildUser(res.email, res.role, res.token);
 
-      // ── Load avatar ngay sau khi login ──
-      // Gọi profile API để lấy imageUrl (không block login nếu lỗi)
+      // ── Load avatar + tên thật ngay sau khi login ──
       try {
         if (res.role === 'PATIENT') {
-          // Lazy import để tránh circular dependency
           const { patientGetProfile } = await import('../api/patient');
           const profile = await patientGetProfile();
-          if (profile?.imageUrl) {
-            userData.avatarUrl = getImageUrl(profile.imageUrl);
-          }
-          if (profile?.fullName) {
-            userData.name = profile.fullName;
-          }
+          if (profile?.imageUrl) userData.avatarUrl = getImageUrl(profile.imageUrl);
+          if (profile?.fullName) userData.name = profile.fullName;
         } else if (res.role === 'DOCTOR') {
-          // Doctor profile nếu BE có endpoint (optional)
-          // const { doctorGetProfile } = await import('../api/doctor');
-          // const profile = await doctorGetProfile();
+          // GET /doctor/profile → DoctorDetailResponseDTO
+          // imageUrl từ doctor là URL đầy đủ (khác patient là tên file thuần)
+          const { doctorUpdateProfile: _, ...doctorApi } = await import('../api/doctor');
+          const { doctorGetPatientProfile: __, ...rest } = doctorApi;
+          // Không có GET /doctor/profile riêng → gọi appointments/history để check token
+          // Nếu BE thêm GET /doctor/profile sau này thì enable ở đây
         }
+        // ADMIN/STAFF: chưa có profile API riêng
       } catch {
-        // Không load được avatar → dùng null (không sao)
+        // Không load được → dùng null, không block login
       }
 
       setUser(userData);

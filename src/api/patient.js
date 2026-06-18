@@ -29,16 +29,24 @@ export const patientGetProfile = () =>
   api.get('/patient/profile');
 
 export const patientUpdateProfile = (dto, avatarFile) => {
-  // put ko fai post
+  // lưu ý 
   const form = new FormData();
-  form.append('data', JSON.stringify({
-    dob:                    dto.dob                    || null,
-    bloodType:              dto.bloodType              || null,
-    allergyHistory:         dto.allergyHistory         || null,
-    personalMedicalHistory: dto.personalMedicalHistory || null,
-    familyMedicalHistory:   dto.familyMedicalHistory   || null,
-    imageUrl:               dto.imageUrl               || null,
-  }));
+form.append(
+  'data',
+  new Blob(
+    [JSON.stringify({
+      dob: dto.dob || null,
+      bloodType: dto.bloodType || null,
+      allergyHistory: dto.allergyHistory || null,
+      personalMedicalHistory: dto.personalMedicalHistory || null,
+      familyMedicalHistory: dto.familyMedicalHistory || null,
+      imageUrl: dto.imageUrl || null
+    })],
+    {
+      type: 'application/json'
+    }
+  )
+);
   if (avatarFile) form.append('avatarFile', avatarFile);
   return api.put('/patient/profile', form);
 };

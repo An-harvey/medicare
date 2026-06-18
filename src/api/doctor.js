@@ -20,12 +20,22 @@ import api from './config';
 /* ── Hồ sơ bác sĩ — multipart/form-data ── */
 export const doctorUpdateProfile = (dto, avatarFile) => {
   const form = new FormData();
-  // ⚠️ field tên là "dto" (khác Patient dùng "data")
-  form.append('dto', JSON.stringify({
-    imageUrl:             dto.imageUrl             ?? null,
-    expertiseDescription: dto.expertiseDescription ?? null,
-    biography:            dto.biography            ?? null,
-  }));
+  // lưu ý ::::
+  form.append(
+  'dto',
+  new Blob(
+    [
+      JSON.stringify({
+        imageUrl: dto.imageUrl ?? null,
+        expertiseDescription: dto.expertiseDescription ?? null,
+        biography: dto.biography ?? null,
+      })
+    ],
+    {
+      type: 'application/json'
+    }
+  )
+);
   if (avatarFile) form.append('avatarFile', avatarFile);
   return api.put('/doctor/profile', form);
 };
