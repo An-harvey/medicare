@@ -13,6 +13,8 @@ import Search        from './pages/Search';
 import Dashboard     from './pages/Dashboard';
 import Login         from './pages/auth/LoginPage';
 import Register      from './pages/auth/RegisterPage';
+import ForgotPassword from './pages/auth/ForgotPasswordPage';
+import PaymentResult from './pages/PaymentResultPage';
 import NotFound      from './pages/NotFound';
 import Unauthorized  from './pages/Unauthorized';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -53,6 +55,8 @@ function Layout() {
           <Route path="/search"        element={<Search />} />
           <Route path="/login"         element={<Login />} />
           <Route path="/register"      element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/payment/result"  element={<PaymentResult />} />
           <Route path="/unauthorized"  element={<Unauthorized />} />
 
           {/* Protected */}

@@ -135,7 +135,7 @@ export default function Login() {
                 <input type="checkbox" className="accent-blue-600" />
                 Ghi nhớ đăng nhập
               </label>
-              <a href="#" className="text-blue-600 hover:underline">Quên mật khẩu?</a>
+              <Link to="/forgot-password" className="text-blue-600 hover:underline">Quên mật khẩu?</Link>
             </div>
 
             {/* Submit */}

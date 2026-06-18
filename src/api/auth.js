@@ -26,3 +26,13 @@ export const authRegister = (data) =>
     phone:    data.phone,
     cccd:     data.cccd || '',
   });
+
+/* ── §18: Quên mật khẩu — OTP qua email ── */
+
+/** Bước 1: Gửi OTP về email */
+export const authForgotPassword = (email) =>
+  api.post('/auth/forgot-password', { email });
+
+/** Bước 2: Xác nhận OTP + đặt mật khẩu mới */
+export const authResetPassword = (email, otp, newPassword) =>
+  api.post('/auth/reset-password', { email, otp, newPassword });
