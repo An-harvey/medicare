@@ -66,6 +66,8 @@ export function AuthProvider({ children }) {
       // POST /api/auth/login → { token, email, role }
       const res = await authLogin({ email, password });
       const userData = buildUser(res.email, res.role, res.token);
+      // Set token vào localStorage TRƯỚC khi gọi profile API
+      localStorage.setItem('mc_token', res.token);
 
       // ── Load avatar + tên thật ngay sau khi login ──
       try {
@@ -74,15 +76,8 @@ export function AuthProvider({ children }) {
           const profile = await patientGetProfile();
           if (profile?.imageUrl) userData.avatarUrl = getImageUrl(profile.imageUrl);
           if (profile?.fullName) userData.name = profile.fullName;
-        } else if (res.role === 'DOCTOR') {
-          // GET /doctor/profile → DoctorDetailResponseDTO
-          // imageUrl từ doctor là URL đầy đủ (khác patient là tên file thuần)
-          const { doctorUpdateProfile: _, ...doctorApi } = await import('../api/doctor');
-          const { doctorGetPatientProfile: __, ...rest } = doctorApi;
-          // Không có GET /doctor/profile riêng → gọi appointments/history để check token
-          // Nếu BE thêm GET /doctor/profile sau này thì enable ở đây
         }
-        // ADMIN/STAFF: chưa có profile API riêng
+        // DOCTOR/ADMIN/STAFF: chưa có GET /profile riêng
       } catch {
         // Không load được → dùng null, không block login
       }

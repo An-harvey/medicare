@@ -17,6 +17,7 @@ import {
   canStaffCancel,
 } from '../../utils/staffAppointment';
 import { formatTime } from '../../utils/formatters';
+import { confirmCashPayment } from '../../api/payment';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -29,6 +30,7 @@ export default function CheckInPage() {
   const [cancelReason,  setCancelReason]  = useState('');
   const [cancelling,    setCancelling]    = useState(false);
   const [toast,         setToast]         = useState('');
+  const [cashPayingId,  setCashPayingId]  = useState(null);
 
   const { data: queue, loading, error, refetch, updateStatus } = useStaffAppointments(searchKey);
 
@@ -70,10 +72,31 @@ export default function CheckInPage() {
     } finally { setCancelling(false); }
   };
 
+  // ── Thu tiền mặt (lo_trinh.txt §19 Luồng B) ──
+  // PUT /staff/payments/{appointmentId}/pay-cash
+  // Side effect: CONFIRMED → CHECK_IN tự động
+  const handleCashPayment = async (appt) => {
+    setCashPayingId(appt.appointmentId);
+    try {
+      await confirmCashPayment(appt.appointmentId);
+      showToast('✅ Đã xác nhận thu tiền mặt.');
+      refetch();
+      setSelected(null);
+    } catch (e) {
+      const msg = e?.message || '';
+      if (e?.status === 400 && msg.includes('đã thanh toán')) {
+        showToast('⚠️ Lịch hẹn này đã thanh toán rồi.');
+      } else {
+        showToast('Lỗi: ' + (msg || 'Không thể xác nhận thanh toán'));
+      }
+    } finally {
+      setCashPayingId(null);
+    }
+  };
+
   const getStatus = getStaffStatusMeta;
 
   const stats = [
-    { icon: '⏳', label: 'Chờ xác nhận', value: queue.filter(p => p.status === 'PENDING').length, color: 'text-yellow-700', bg: 'bg-yellow-50' },
     { icon: '📋', label: 'Đã xác nhận',  value: queue.filter(p => p.status === 'CONFIRMED').length, color: 'text-blue-700', bg: 'bg-blue-50' },
     { icon: '✅', label: 'Đã check-in',  value: queue.filter(p => ['CHECK_IN','IN_PROGRESS','COMPLETED'].includes(p.status)).length, color: 'text-cyan-700', bg: 'bg-cyan-50' },
     { icon: '📊', label: 'Tổng',         value: queue.length, color: 'text-gray-700', bg: 'bg-gray-100' },
@@ -230,6 +253,19 @@ export default function CheckInPage() {
                 <button onClick={() => { setCancelReason(''); setCancelModal(true); }}
                   className="w-full border border-red-200 text-red-600 text-xs font-bold py-2.5 rounded-xl hover:bg-red-50">
                   🚫 Hủy lịch hẹn
+                </button>
+              )}
+
+              {/* Thu tiền mặt — khi CONFIRMED (lo_trinh.txt §19 Luồng B) */}
+              {selected.status === 'CONFIRMED' && (
+                <button
+                  disabled={cashPayingId === selected.appointmentId}
+                  onClick={() => handleCashPayment(selected)}
+                  className="w-full bg-green-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {cashPayingId === selected.appointmentId ? (
+                    <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Đang xử lý...</>
+                  ) : '💵 Thu tiền mặt'}
                 </button>
               )}
 

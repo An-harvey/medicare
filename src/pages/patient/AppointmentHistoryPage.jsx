@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMyAppointments } from '../../hooks/useAppointments';
+import { createVnPayLink } from '../../api/payment';
 
 // ── Map BE status enum → FE display — đúng theo BE enum ──
 // BE: PENDING | CONFIRMED | CHECK_IN | IN_PROGRESS | COMPLETED | CANCELLED
@@ -54,10 +55,27 @@ export default function MyBookings() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
-  const [toast, setToast] = useState(''); // thông báo thành công
+  const [toast, setToast] = useState('');
+  const [payingId, setPayingId] = useState(null); // appointment đang xử lý thanh toán
 
   // ── PATIENT: lấy danh sách lịch hẹn từ API ──
   const { data: appointments, loading, error, refetch, cancel } = useMyAppointments();
+
+  // ── PATIENT: thanh toán VNPay ──
+  const handlePayVnPay = async (appointmentId) => {
+    setPayingId(appointmentId);
+    try {
+      const res = await createVnPayLink(appointmentId);
+      if (res?.paymentUrl) {
+        window.location.href = res.paymentUrl; // redirect ra ngoài VNPay
+      }
+    } catch (e) {
+      setToast('Lỗi tạo link thanh toán: ' + (e?.message || 'Thử lại sau'));
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   // ── Filter theo tab ──
   const filtered = appointments.filter(b => {
@@ -225,6 +243,19 @@ export default function MyBookings() {
                     Không thể hủy — bệnh nhân đã check-in
                   </p>
                 ) : null}
+
+                {/* Thanh toán VNPay — khi PENDING */}
+                {detail.status === 'PENDING' && (
+                  <button
+                    onClick={() => handlePayVnPay(detail.appointmentId)}
+                    disabled={payingId === detail.appointmentId}
+                    className="w-full bg-green-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {payingId === detail.appointmentId ? (
+                      <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Đang xử lý...</>
+                    ) : '💳 Thanh toán VNPay'}
+                  </button>
+                )}
               </div>
             );
           })() : (

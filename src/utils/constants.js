@@ -42,6 +42,20 @@ export const SCHEDULE_STATUS = {
   CANCELLED: { label: 'Đã hủy',  cls: 'bg-gray-100 text-gray-400' },
 };
 
+// ── Payment Status (lo_trinh.txt §19) ──
+export const PAYMENT_STATUS = {
+  UNPAID:    { label: 'Chưa thanh toán', cls: 'bg-red-100 text-red-700' },
+  PAID:      { label: 'Đã thanh toán',   cls: 'bg-green-100 text-green-700' },
+  REFUNDED:  { label: 'Đã hoàn tiền',    cls: 'bg-orange-100 text-orange-700' },
+  CANCELLED: { label: 'Đã hủy',          cls: 'bg-gray-100 text-gray-500' },
+};
+
+// ── Payment Method ──
+export const PAYMENT_METHOD = {
+  ONLINE: { label: 'VNPay Online' },
+  CASH:   { label: 'Tiền mặt tại quầy' },
+};
+
 // ── Role enums ──
 export const ROLES = {
   ADMIN:   'ADMIN',

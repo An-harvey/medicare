@@ -33,7 +33,7 @@ export default function ProfilePage() {
   // ── State riêng cho DOCTOR (chỉ sửa được 3 field) ──
   const [doctor, setDoctor] = useState({ expertiseDescription: '', biography: '' });
 
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || null); // load từ context trước
   const [avatarFile,    setAvatarFile]    = useState(null);
   const [loading,       setLoading]       = useState(false);
   const [saved,         setSaved]         = useState(false);
