@@ -93,9 +93,14 @@ export default function PaymentResultPage() {
             </div>
             <h2 className="text-2xl font-extrabold text-gray-800 mb-2">Thanh toán thành công!</h2>
             <p className="text-sm text-gray-500 mb-6">Lịch hẹn đã được xác nhận. Vui lòng đến đúng giờ.</p>
-            <Link to="/dashboard/bookings" className="block bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700">
-              📅 Xem lịch hẹn của tôi
-            </Link>
+            <div className="flex flex-col gap-3">
+              <Link to="/dashboard/bookings" className="block bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700">
+                📅 Xem lịch hẹn của tôi
+              </Link>
+              <Link to="/dashboard/payments" className="block border border-gray-200 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-50">
+                💳 Lịch sử thanh toán
+              </Link>
+            </div>
           </>
         )}
 

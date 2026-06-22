@@ -16,6 +16,7 @@ const NAV = {
   user: [
     { to: '/dashboard',              icon: '🏠', label: 'Tổng quan' },
     { to: '/dashboard/bookings',     icon: '📅', label: 'Lịch hẹn của tôi' },
+    { to: '/dashboard/payments',     icon: '💳', label: 'Thanh toán' },
     { to: '/dashboard/records',      icon: '📋', label: 'Hồ sơ sức khỏe' },
     { to: '/dashboard/my-settings',  icon: '⚙️', label: 'Cài đặt', disabled: true },
   ],

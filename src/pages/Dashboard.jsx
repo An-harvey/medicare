@@ -27,6 +27,7 @@ import SettingsPage       from './dashboard/shared/SettingsPage';
 /* ── PATIENT ── */
 import AppointmentHistoryPage from './patient/AppointmentHistoryPage';
 import MedicalRecordsPage     from './patient/MedicalRecordsPage';
+import PatientPaymentsPage    from './patient/PatientPaymentsPage';
 
 /* ── DOCTOR ── */
 import DoctorSchedulePage          from './doctor/DoctorSchedulePage';
@@ -69,6 +70,7 @@ export default function Dashboard() {
 
         {/* ══════════ PATIENT routes ══════════ */}
         <Route path="bookings" element={<AppointmentHistoryPage />} />
+        <Route path="payments" element={<PatientPaymentsPage />} />
         <Route path="records"  element={<MedicalRecordsPage />} />
 
         {/* ══════════ DOCTOR routes ══════════ */}
